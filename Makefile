@@ -1,4 +1,5 @@
-# sudo avrdude -p attiny85 -C+/home/lmeier/Projekte/wmucpp/avrdude.conf -P usb -c avrisp2 -U lfuse:w:0x62:m -U hfuse:w:0xd7:m -U efuse:w:0xff:m -U flash:w:test00.elf
+# sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf -U lfuse:w:0xc6:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
+# sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf
 
 MCU = atmega328pb
 F_OSC = 8000000
