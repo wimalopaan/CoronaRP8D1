@@ -19,32 +19,6 @@
 #include "assembly.h"
 #include "pins.h"
 
-// ************************************
-// eeprom data
-
-// __eeprom T_EEPROM eeprom = {
-// 	0xff,															// bad byte
-	
-// //	START_CHAN,														// rf channel
-// 	62,																// rf channel
-// //	76,																// rf channel
-
-// //	0,																// pwm_channels
-// 	7,																// pwm_channels
-// //	6,																// pwm_channels
-	
-// 	true,															// pwm_out_mode
-	
-// //	false,															// failsafe_enabled
-// 	true,															// failsafe_enabled
-	
-// 	1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,		// failsafe_pwm
-	
-// 	20000															// ppm_frame_length
-// };
-
-// ************************************
-
 T_PACKET packet;
 
 uint8_t state;
@@ -60,6 +34,7 @@ uint16_t prev_icr1;
 
 // values read from eeprom
 T_EEPROM ee;
+T_EEPROM eeprom EEMEM;
 
 volatile bool failsafe_mode;
 
@@ -91,6 +66,8 @@ uint8_t uart_rx_buffer_rd;
 void stopUART(void);
 void startUART(void);
 
+void uartTxByteWait(uint8_t b);
+
 // ************************************
 // integer sqrt
 
@@ -114,21 +91,25 @@ uint8_t sqrti(uint16_t in)
 
 void setDefaultSettings(void)
 {
+#ifdef USART_DEBUG
+    uartTxByteWait(0x01);
+#endif
     ee.bad_byte = 42;
 	ee.rf_channel = START_CHAN;
 	ee.pwm_channels = 0;
+#ifdef USART_DEBUG
+    ee.pwm_out_mode = false;
+#else
 	ee.pwm_out_mode = true;
+#endif
 	ee.failsafe_enabled = false;
 	for (int i = 0; i < MAX_PWM_CHANNELS; i++)
 		ee.failsafe_pwm[i] = 1000;
 	ee.ppm_frame_length = 20000;
 
 	// write the settings back to eeprom
-    // eeprom = ee;
-    eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+    eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
     eeprom_busy_wait();
-    // if (eeprom_is_ready()) {
-    // }
 
 	stopUART();
 }
@@ -875,7 +856,8 @@ void processExec(void)
 	{											// enter fail-safe mode then
 		setPLLChannel(ee.rf_channel);			// just incase the PLL has lost it's settings
 //		useFailSafeValues();					// fall back to the failsafe settings
-		failsafe_mode = true;					// fall back to the failsafe settings
+
+        failsafe_mode = true;					// fall back to the failsafe settings
 		pwm_in_frames = 0;
 		pwm_in_index = -1;
 	}
@@ -895,7 +877,11 @@ void processExec(void)
 			LED_PORT &= ~(1 << LED_BIT);		// led OFF
 		else
 			LED_PORT |= 1 << LED_BIT;			// led ON
-		return;
+#ifdef USART_DEBUG
+        uartTxByteWait(0x02);
+        uartTxByteWait(ee.pwm_channels);
+#endif
+        return;
 	}
 
 	// we are bound to an RC Tx
@@ -1022,9 +1008,14 @@ void scan(void)
 		ee.ppm_frame_length = ppm_length;
 
 		// save the new settings into eeprom		
-        // eeprom = ee;
-        eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+        eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
         eeprom_busy_wait();
+
+#ifdef USART_DEBUG
+        uartTxByteWait(0x04);
+        uartTxByteWait(ee.pwm_channels);
+        uartTxByteWait(ee.rf_channel);
+#endif
 
 		setPLLChannel(rf_chan);							// switch back to the channel with the strongest signal
         // __delay_cycles((uint32_t)(FOSC * 0.030));		// wait 30ms .. give the PLL time to lock - takes around 25ms for large frequency change
@@ -1126,7 +1117,7 @@ bool processState(void)
 		case state_disable_failsafe_option:			// disable fail-safe option
 			ee.failsafe_enabled = false;
             // eeprom.failsafe_enabled = ee.failsafe_enabled;
-            eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+            eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
             eeprom_busy_wait();
 
             break;
@@ -1141,7 +1132,7 @@ bool processState(void)
                 // for (int i = 0; i < MAX_PWM_CHANNELS; i++)
                 // 	eeprom.failsafe_pwm[i] = ee.failsafe_pwm[i];
                 // eeprom.failsafe_enabled = ee.failsafe_enabled;
-                eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+                eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
                 eeprom_busy_wait();
 
             }
@@ -1158,9 +1149,8 @@ bool processState(void)
 				pwm_out_index = 0;					// back to channel-1
 				ee.pwm_out_mode = true;
                 // eeprom.pwm_out_mode = ee.pwm_out_mode;
-                eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+                eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
                 eeprom_busy_wait();
-
             // __enable_interrupt();
             sei();
 			break;
@@ -1173,7 +1163,7 @@ bool processState(void)
 				pwm_out_total = ee.ppm_frame_length;
 				ee.pwm_out_mode = false;
                 // eeprom.pwm_out_mode = ee.pwm_out_mode;
-                eeprom_write_block(0, (uint8_t*)(&ee), sizeof(T_EEPROM));
+                eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
                 eeprom_busy_wait();
 
                 startUART();
@@ -1297,7 +1287,14 @@ int main(void)
 	// read the values
     // ee = eeprom;
     eeprom_busy_wait();
-    eeprom_read_block((uint8_t*)(&ee), (void*)(0), sizeof(T_EEPROM));
+    eeprom_read_block((void*)(&ee), (const void*)(&eeprom), sizeof(T_EEPROM));
+
+#ifdef USART_DEBUG
+    startUART();
+    uartTxByteWait(0x00);
+    uartTxByteWait(ee.rf_channel);
+    uartTxByteWait(ee.pwm_channels);
+#endif
 
 	{	// check the values
 		bool eeprom_value_error = false;
@@ -1312,7 +1309,7 @@ int main(void)
         // 	if (ee.failsafe_pwm[i] < MIN_PWM_WIDTH || ee.failsafe_pwm[i] > MAX_PWM_WIDTH)
         // 		eeprom_value_error = true;
 		
-		if (eeprom_value_error)
+        if (eeprom_value_error)
 			setDefaultSettings();		// an error was found in the values we read from eeprom .. revert to default settings
 	}
 	
@@ -1405,10 +1402,5 @@ int main(void)
 		}
 	}
 
-	// *******************
-
-    // #pragma diag_suppress=Pe111	// stop the compiler showing a warning about the following line
 	return 0;
 }
-
-// ************************************

@@ -1,4 +1,3 @@
-
 // This is a replacement firmware for the Corona RP8D1 RC receiver.
 //
 // It has only been used on the 8-channel 35MHz version (RP8D1). If you want to use it
@@ -16,9 +15,7 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 
-// #include <ioavr.h>
-// #include <inavr.h>
-// #include <intrinsics.h>
+// #define USART_DEBUG // anble debug messages via UART
 
 #include "types.h"
 
@@ -92,12 +89,19 @@ enum {
 // #define START_CHAN			      55	// UK min chan
 // #define END_CHAN			      90	// UK max chan
 
-// UK 40MHz
+// // UK 40MHz
+// #define PLL_VCO_OFFSET		10700000ul	// Hz
+// #define CH_STEP				   10000	// Hz .. 10kHz channel spacing
+// #define CH0_FREQ			34015000ul	// Hz
+// #define START_CHAN			     665	// UK min chan 40.665 MHz
+// #define END_CHAN			     995	// UK max chan 43.965 MHz
+
+// D 40MHz
 #define PLL_VCO_OFFSET		10700000ul	// Hz
 #define CH_STEP				   10000	// Hz .. 10kHz channel spacing
 #define CH0_FREQ			34015000ul	// Hz
-#define START_CHAN			     665	// UK min chan
-#define END_CHAN			     995	// UK max chan
+#define START_CHAN			     665	// UK min chan 40.665 MHz
+#define END_CHAN			     697	// UK max chan 40.985 MHz
 
 // Aussie 36MHz
 //#define PLL_VCO_OFFSET		10700000ul	// Hz
@@ -126,9 +130,6 @@ enum {
 //#define CH0_FREQ			36000000ul	// Hz
 //#define START_CHAN			     451	// NZ min chan
 //#define END_CHAN			     493	// NZ max chan
-
-
-
 
 
 #define PLL_REF_XTAL		11155000ul	// Hz
@@ -174,11 +175,5 @@ typedef struct
 } T_PACKET;
 
 #pragma pack()
-
-//*************************************
-
-//extern __eeprom uint16_t ee_pwm_in_width[MAX_PWM_CHANNELS];
-
-//*************************************
 
 #endif
