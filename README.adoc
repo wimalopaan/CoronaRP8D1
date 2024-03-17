@@ -1,8 +1,62 @@
 = Replacement firmware for Corona RP81 scan receiver
+Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
+:lang: en
+:toc2:
+:data-uri:
+:icons: font
+:numbered: 
+:src_numbered: unnumbered
+:title-page:
+:sectanchors:
+:sectlinks:
+:experimental:
+:status:
+:menu:
+:navigation:
+:split:
+:goto:
+:showtitle:
 
 == Intro
 
 == Hardware
+
+[%header]
+|===
+|Pin	| Name	| Function
+|1	    | PD3	| Bind button input
+|2	    | PD4	| Bind LED output
+|3   	|GND	| GND
+|4	    |VCC	|VCC 3.3V
+|5	    |GND	|GND
+|6	|VCC	|VCC 3.3V
+|7	|XTAL1	|Crystal 8MHz
+|8	|XTAL2	|Crystal 8MHz
+|9	|PD5	|Not connected
+|10	|PD6/AIN0	|PPM sum signal input
+|11	|PD7/AIN1	|DC 1.46V
+|12	|PB0	|Channel 1 PPM output
+|13	|PB1	|Channel 2 PPM output
+|14	|PB2    |Channel 3 PPM output
+|15	|PB3	|Channel 4 PPM output
+|16	|PB4	|Channel 5 PPM output
+|17	|PB5	|Channel 6 PPM output
+|18	|AVCC	|AVCC 3.26V
+|19	|ADC6	|Not connected
+|20	|AREF	|AREF 3.26V
+|21	|GND	|GND
+|22	|ADC7	|Not connected
+|23	|PC0/ADC0	|RSSI signal input
+|24	|PC1/ADC1	|PPM signal threshold for analog comparator, level set by ext. voltage divider
+|25	|PC2	|PLL CE signal output
+|26	|PC3	|PLL DATA signal output
+|27	|PC4	|PLL CLK signal output
+|28	|PC5	|Not connected
+|29	|PC6	|Channel 9 PPM output
+|30	|PD0	|Channel 8 PPM output
+|31	|PD1	|Channel 7 PPM output
+|32	|PD2	|Not connected
+|===
 
 == Firmware
 
