@@ -1,13 +1,28 @@
-// This is a replacement firmware for the Corona RP8D1 RC receiver.
-//
-// It has only been used on the 8-channel 35MHz version (RP8D1). If you want to use it
-// on other frequency versions of the receiver then you need to modify the
-// CH_STEP, CH0_FREQ, START_CHAN, END_CHAN #defines accordingly.
-//
-// Their are NO guarantees or warranties what so ever with this code, use at your own risk!
+/*
+ * Copyright (C) 2024 Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
 
-#ifndef _MAIN_H_
-#define _MAIN_H_
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#ifndef F_CPU
+# define F_CPU 8000000ul	// cpu clock frequency (Hz)
+#endif
+
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <avr/io.h>
 #include <avr/eeprom.h>
@@ -17,10 +32,6 @@
 
 // #define USART_DEBUG // anble debug messages via UART
 
-#include "types.h"
-
-//*************************************
-
 #define low(word_reg)				((uint8_t)(word_reg))
 #define high(word_reg)				((uint8_t)(word_reg >> 8))
 
@@ -28,12 +39,6 @@
 #define byte2(dword_reg)			((uint8_t)(dword_reg >> 8))
 #define byte3(dword_reg)			((uint8_t)(dword_reg >> 16))
 #define byte4(dword_reg)			((uint8_t)(dword_reg >> 24))
-
-//*************************************
-
-#define FOSC						8000000ul	// cpu clock frequency (Hz)
-
-//*************************************
 
 #define UART_BAUDRATE				19200
 //#define UART_BAUDRATE				38400
@@ -45,8 +50,6 @@
 //#define UART_BAUDRATE				921600
 
 #define UART_RX_BUFFER_SIZE			32
-
-//*************************************
 
 enum {
 	state_normal = 0,
@@ -77,10 +80,6 @@ enum {
 #define MAX_PWM_WIDTH				2200		// microseconds
 
 #define INTER_PWM_GAP				100			// microseconds
-
-//*************************************
-
-
 
 // UK 35MHz
 // #define PLL_VCO_OFFSET		10700000ul	// Hz
@@ -176,4 +175,3 @@ typedef struct
 
 #pragma pack()
 
-#endif

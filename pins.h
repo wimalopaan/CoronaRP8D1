@@ -1,14 +1,21 @@
+/*
+ * Copyright (C) 2024 Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
 
-// This is a replacement firmware for the Corona RP8D1 RC receiver.
-//
-// It has only been used on the 8-channel 35MHz version (RP8D1). If you want to use it
-// on other frequency versions of the receiver then you need to modify the
-// CH_STEP, CH0_FREQ, START_CHAN, END_CHAN #defines accordingly.
-//
-// Their are NO guarantees or warranties what so ever with this code, use at your own risk!
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef _PINS_H_
-#define _PINS_H_
+#pragma once
 
 #define BUT_BIT						PD3
 #define BUT_DIR						DDRD
@@ -111,5 +118,3 @@
 #define CHAN_8_OUT_DIR				DDRD
 #define CHAN_8_OUT_PIN				PIND
 #define CHAN_8_OUT_PORT				PORTD
-
-#endif
