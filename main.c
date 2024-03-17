@@ -77,24 +77,6 @@ void startUART(void);
 void uartTxByteWait(uint8_t b);
 
 // ************************************
-// integer sqrt
-
-uint8_t sqrti(uint16_t in)
-{
-    uint8_t out = 0;
-    uint8_t bit = 128;
-    while (bit > 0)
-    {
-        uint8_t k = out | bit;
-        uint16_t j = (uint16_t)k * k;
-        if (in >= j) out = k;
-        bit >>= 1;
-        //		if (in == j) break;
-    }
-    return out;
-}
-
-// ************************************
 // revert all settings back to defaults
 
 void setDefaultSettings(void)
@@ -1102,25 +1084,17 @@ bool processState(void)
 
     case state_disable_failsafe_option:			// disable fail-safe option
         ee.failsafe_enabled = false;
-        // eeprom.failsafe_enabled = ee.failsafe_enabled;
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
         eeprom_busy_wait();
-
         break;
-
     case state_enable_failsafe_option:			// enable fail-safe option
         if (!failsafe_mode && ee.pwm_channels >= MIN_PWM_CHANNELS)
         {	// save the current output pulse widths as the fail-safe values
             for (int i = 0; i < ee.pwm_channels; i++) ee.failsafe_pwm[i] = pwm_out[i];
             for (int i = ee.pwm_channels; i < MAX_PWM_CHANNELS; i++) ee.failsafe_pwm[i] = 1000;
             ee.failsafe_enabled = true;
-
-            // for (int i = 0; i < MAX_PWM_CHANNELS; i++)
-            // 	eeprom.failsafe_pwm[i] = ee.failsafe_pwm[i];
-            // eeprom.failsafe_enabled = ee.failsafe_enabled;
             eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
             eeprom_busy_wait();
-
         }
         else
         {	// we are not currently receiving a valid RC Tx
@@ -1133,7 +1107,6 @@ bool processState(void)
         allOutputsLow();
         pwm_out_index = 0;					// back to channel-1
         ee.pwm_out_mode = true;
-        // eeprom.pwm_out_mode = ee.pwm_out_mode;
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
         eeprom_busy_wait();
         sei();
@@ -1145,10 +1118,8 @@ bool processState(void)
         pwm_out_index = 0;					// back to channel-1
         pwm_out_total = ee.ppm_frame_length;
         ee.pwm_out_mode = false;
-        // eeprom.pwm_out_mode = ee.pwm_out_mode;
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
         eeprom_busy_wait();
-
         startUART();
         sei();
         break;
@@ -1160,7 +1131,6 @@ bool processState(void)
         sei();
         break;
     }
-
     return false;
 }
 
@@ -1169,8 +1139,6 @@ bool processState(void)
 int main(void)
 {
     cli();
-
-    // *******************
 
     CLKPR = 1 << CLKPCE;					// Enable main clock prescaler change
     CLKPR = 0;								// prescaler = 1
@@ -1261,9 +1229,7 @@ int main(void)
 
     // *******************
     // read the eeprom values .. and correct them if they are invalid
-
     // read the values
-    // ee = eeprom;
     eeprom_busy_wait();
     eeprom_read_block((void*)(&ee), (const void*)(&eeprom), sizeof(T_EEPROM));
 
@@ -1373,6 +1339,5 @@ int main(void)
                 break;
         }
     }
-
     return 0;
 }
