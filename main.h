@@ -30,7 +30,7 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 
-// #define USART_DEBUG // anble debug messages via UART
+// #define USART_DEBUG // anble debug messages via UART (then ch7 and ch8 are not usable)
 #define MAX_FILTER_CHANNEL 4 // Channels above are not filtered
 #define SENDER_ID_CHANNEL 8 // Channel 9 sould contain sender ID (8-bit time multiplex (4 frames, each 2 bits)
 #define SBUS_OUT // sbus output on serial port
@@ -57,7 +57,9 @@
 enum {
 	state_normal = 0,
 	state_but_release,
-	state_scan_option,
+    state_scan_option, // 1 blink
+    state_enable_filter_option, // 2 blink
+    state_disable_filter_option, // 3 blink
 	state_disable_failsafe_option,
 	state_enable_failsafe_option,
 	state_enable_pwm_option,
@@ -157,7 +159,8 @@ enum {
 
 typedef struct
 {
-	uint8_t  bad_byte;									// the 1st byte of eeprom is a none problem
+    uint8_t  bad_byte_dont_use;  						// the 1st byte of eeprom is a none problem
+    uint8_t  magic_number;
 	uint16_t rf_channel;								// the receivers RF channel number
 	uint8_t  pwm_channels;								// the number of channels found in the PPM stream of the RC TX we bound too
 	bool     pwm_out_mode;								// false = PPM output mode, true = PWM output mode
@@ -165,6 +168,7 @@ typedef struct
 	uint16_t failsafe_pwm[MAX_PWM_CHANNELS];			// microseconds
 	uint16_t ppm_frame_length;							// microseconds
     bool     filter_high_channels;                      // enable channels >= MAX_FILTER_CHANNEL
+    // not implemented yet
     bool     enable_sender_id;                          // enable sender identification (channel SENDER_ID_CHANNEL)
     uint8_t  sender_id;                                 // enable sender identification (channel SENDER_ID_CHANNEL)
 } T_EEPROM;

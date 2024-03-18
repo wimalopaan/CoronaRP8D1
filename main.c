@@ -84,7 +84,7 @@ void setDefaultSettings(void)
 #ifdef USART_DEBUG
     uartTxByteWait(0x01);
 #endif
-    ee.bad_byte = 42;
+    ee.magic_number = 42;
     ee.rf_channel = START_CHAN;
     ee.pwm_channels = 0;
 #ifdef USART_DEBUG
@@ -1093,7 +1093,16 @@ bool processState(void)
     case state_scan_option:						// scan option - bind to an RC Tx
         scan();
         break;
-
+    case state_enable_filter_option:
+        ee.filter_high_channels = true;
+        eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
+        eeprom_busy_wait();
+        break;
+    case state_disable_filter_option:
+        ee.filter_high_channels = false;
+        eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
+        eeprom_busy_wait();
+        break;
     case state_disable_failsafe_option:			// disable fail-safe option
         ee.failsafe_enabled = false;
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
@@ -1254,16 +1263,16 @@ int main(void)
 
     {	// check the values
         bool eeprom_value_error = false;
-        if (ee.bad_byte != 42) eeprom_value_error = true;
+        if (ee.magic_number != 42) eeprom_value_error = true;
 
-        if (ee.rf_channel < START_CHAN || ee.rf_channel > END_CHAN) eeprom_value_error = true;
-        if (ee.pwm_channels < MIN_PWM_CHANNELS || ee.pwm_channels > MAX_PWM_CHANNELS) eeprom_value_error = true;
-        if (ee.pwm_out_mode != false && ee.pwm_out_mode != true) eeprom_value_error = true;
-        if (ee.failsafe_enabled != false && ee.failsafe_enabled != true) eeprom_value_error = true;
-        if (ee.ppm_frame_length < MIN_PPM_FRAME_LENGTH || ee.ppm_frame_length > MAX_PPM_FRAME_LENGTH) eeprom_value_error = true;
-        for (int i = 0; i < MAX_PWM_CHANNELS && !eeprom_value_error; i++)
-            if (ee.failsafe_pwm[i] < MIN_PWM_WIDTH || ee.failsafe_pwm[i] > MAX_PWM_WIDTH)
-                eeprom_value_error = true;
+        // if (ee.rf_channel < START_CHAN || ee.rf_channel > END_CHAN) eeprom_value_error = true;
+        // if (ee.pwm_channels < MIN_PWM_CHANNELS || ee.pwm_channels > MAX_PWM_CHANNELS) eeprom_value_error = true;
+        // if (ee.pwm_out_mode != false && ee.pwm_out_mode != true) eeprom_value_error = true;
+        // if (ee.failsafe_enabled != false && ee.failsafe_enabled != true) eeprom_value_error = true;
+        // if (ee.ppm_frame_length < MIN_PPM_FRAME_LENGTH || ee.ppm_frame_length > MAX_PPM_FRAME_LENGTH) eeprom_value_error = true;
+        // for (int i = 0; i < MAX_PWM_CHANNELS && !eeprom_value_error; i++)
+        //     if (ee.failsafe_pwm[i] < MIN_PWM_WIDTH || ee.failsafe_pwm[i] > MAX_PWM_WIDTH)
+        //         eeprom_value_error = true;
 
         if (eeprom_value_error)
             setDefaultSettings();		// an error was found in the values we read from eeprom .. revert to default settings
@@ -1319,6 +1328,7 @@ int main(void)
 
     // *******************
 
+    // failsafe_mode = false;
     sei();
 
     while (true)
