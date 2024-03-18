@@ -367,7 +367,7 @@ ISR(USART0_RX_vect){
             }
 
             // save the received channel pulse widths
-            for (int i = 0; i < pwm_in_index; i++)
+            for (int8_t i = 0; i < pwm_in_index; i++)
                 new_pwm_in[i] = pwm_in[i];
 
             new_pwm_in_chans = pwm_in_index;
@@ -427,7 +427,7 @@ ISR(USART0_RX_vect){
 
             if (new_pwm_in[0] <= 0)
             {
-                for (int i = 0; i < pwm_in_index; i++) {
+                for (int8_t i = 0; i < pwm_in_index; i++) {
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
                         new_pwm_in[i] = pwm_in[i];
                     }
@@ -435,25 +435,26 @@ ISR(USART0_RX_vect){
             }
 
             uint16_t new_average_diff = 0;
-            for (int i = 0; i < pwm_in_index; i++)
+            for (int8_t i = 0; i < pwm_in_index; i++)
             {
                 uint16_t diff = abs((int16_t)pwm_in[i] - prev_pwm_in[i]);
                 new_average_diff += diff;
-                //				prev_pwm_in[i] = diff;
             }
             new_average_diff /= pwm_in_index;
 
-            //			average_diff = new_average_diff;
             average_diff = (average_diff + new_average_diff) >> 1;
 
 #define MIN_FILTER_VALUE		16						// no filtering
 #define MAX_FILTER_VALUE		(MIN_FILTER_VALUE * 80)	// max filtering
 
-            if (average_diff < MIN_FILTER_VALUE) average_diff = MIN_FILTER_VALUE;	// limit minimum filtering
-            else
-                if (average_diff > MAX_FILTER_VALUE) average_diff = MAX_FILTER_VALUE;	// limit maximum filtering
+            if (average_diff < MIN_FILTER_VALUE) {
+                average_diff = MIN_FILTER_VALUE;	// limit minimum filtering
+            }
+            else if (average_diff > MAX_FILTER_VALUE) {
+                average_diff = MAX_FILTER_VALUE;	// limit maximum filtering
+            }
 
-            for (int i = 0; i < pwm_in_index; i++)
+            for (int8_t i = 0; i < pwm_in_index; i++)
             {
                 if ((i < MAX_FILTER_CHANNEL) || ee.filter_high_channels) {
                     int16_t in = pwm_in[i];
@@ -464,9 +465,12 @@ ISR(USART0_RX_vect){
 
                     if (diff < 2) diff = 0;
 
-                    if (out < in) out += diff;
-                    else
-                        if (out > in) out -= diff;
+                    if (out < in) {
+                        out += diff;
+                    }
+                    else if (out > in) {
+                        out -= diff;
+                    }
 
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
                         new_pwm_in[i] = out;
@@ -481,13 +485,12 @@ ISR(USART0_RX_vect){
 
             if (pwm_in_frames >= 4)
             {
-                //				LED_PIN |= 1 << LED_BIT;					// led TOGGLE... TEST ONLY
                 new_pwm_in_chans = pwm_in_index;			// let the pwm output routine use the new values
                 failsafe_mode = false;
             }
 
             // remember this new block of pulse widths
-            for (int i = 0; i < pwm_in_index; i++)
+            for (int8_t i = 0; i < pwm_in_index; i++)
                 prev_pwm_in[i] = pwm_in[i];
 
             last_ppm_frame_received_timer = 0;				// reset PPM frame timer
@@ -520,9 +523,8 @@ ISR(USART0_RX_vect){
     return true;
 }
 
-void processInputCapture(void)
-{
-    uint8_t flags = TIFR1 & ((1 << TOV1) | (1 << ICF1));
+void processInputCapture(void) {
+    const uint8_t flags = TIFR1 & ((1 << TOV1) | (1 << ICF1));
     if (!flags)
         return;										// nothing to process
 
@@ -535,8 +537,8 @@ void processInputCapture(void)
     if (!(flags & (1 << ICF1)))
         return;										// input capture not yet triggered
 
-    uint16_t icr1 = (uint16_t)ICR1;					// read the captured timer value
-    uint16_t microsecs = (uint16_t)((int16_t)icr1 - prev_icr1);
+    const uint16_t icr1 = (uint16_t)ICR1;					// read the captured timer value
+    const uint16_t microsecs = (uint16_t)((int16_t)icr1 - prev_icr1);
 
     //	uint16_t microsecs;
     //	if (icr1 < prev_icr1)
@@ -544,31 +546,26 @@ void processInputCapture(void)
     //	else
     //		microsecs = icr1 - prev_icr1
 
-    if (scanning)
-    {	// looking a new RC Tx to bind with
+    if (scanning) {	// looking a new RC Tx to bind with
         processInputCaptureScanning(microsecs);
     }
-    else
-    {	// normal mode
+    else {	// normal mode
         if (!processInputCaptureNormal(microsecs))
-            return;
+            return; // correct?
     }
-
     prev_icr1 = icr1;
 }
 
 // ************************************
 
-void setPLL(uint32_t data)
-{
+void setPLL(uint32_t data) {
     PLL_CLK_OUT_PORT &= ~(1 << PLL_CLK_OUT_BIT);			// pin LOW
     PLL_CE_OUT_PORT &= ~(1 << PLL_CE_OUT_BIT);				// pin LOW
     _delay_us(16);
     PLL_CE_OUT_PORT |= 1 << PLL_CE_OUT_BIT;					// pin HIGH
     _delay_us(10);
-    for (int i = 24; i > 0; i--)
-    {
-        bool b = data & 1;
+    for (int8_t i = 24; i > 0; i--) {
+        const bool b = data & 1;
         data >>= 1;
         if (!b)
             PLL_DATA_OUT_PORT &= ~(1 << PLL_DATA_OUT_BIT);	// pin LOW
@@ -585,8 +582,7 @@ void setPLL(uint32_t data)
     PLL_CE_OUT_PORT &= ~(1 << PLL_CE_OUT_BIT);				// pin LOW
 }
 
-void setPLLChannel(uint16_t channel)
-{
+void setPLLChannel(uint16_t channel) {
     if (channel < START_CHAN) channel = START_CHAN;
     else
         if (channel > END_CHAN) channel = END_CHAN;
@@ -615,8 +611,8 @@ void setPLLChannel(uint16_t channel)
 
 // ************************************
 
-void enableAnaComp(void)
-{	// this uses the AIN0 and ADC1 inputs - so we can't use the normal ADC while we are using the AC
+void enableAnaComp(void) {
+    // this uses the AIN0 and ADC1 inputs - so we can't use the normal ADC while we are using the AC
 
     PRR0 &= ~(1 << PRADC);			// power up the adc
 
@@ -641,8 +637,7 @@ void enableAnaComp(void)
 
 // ************************************
 
-void enableADC(void)
-{
+void enableADC(void) {
     PRR0 &= ~(1 << PRADC);		// power up the adc
 
     // disable Analogue Comparator
@@ -668,8 +663,7 @@ void enableADC(void)
     ADCSRA |= (1<<ADSC) | (1<<ADIF);
 }
 
-int16_t readADC(void)
-{
+int16_t readADC(void) {
     if (!(ADCSRA & (1 << ADIF)))
         return -1;						// ADC is still sampling
     uint16_t adc = ADC;					// read the ADC register
@@ -679,8 +673,7 @@ int16_t readADC(void)
 
 // ************************************
 
-void startTimer0(void)
-{
+void startTimer0(void) {
     uint8_t sreg = SREG;
     cli();
 
@@ -706,8 +699,7 @@ void startTimer0(void)
 
 // ************************************
 
-void startTimer1(void)
-{
+void startTimer1(void) {
     uint8_t sreg = SREG;
     cli();
 
