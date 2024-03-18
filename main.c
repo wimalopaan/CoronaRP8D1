@@ -82,8 +82,7 @@ void uartTxByteWait(uint8_t b);
 // ************************************
 // revert all settings back to defaults
 
-void setDefaultSettings(void)
-{
+void setDefaultSettings(void) {
 #ifdef USART_DEBUG
     uartTxByteWait(0x01);
 #endif
@@ -96,8 +95,9 @@ void setDefaultSettings(void)
     ee.pwm_out_mode = true;
 #endif
     ee.failsafe_enabled = false;
-    for (int i = 0; i < MAX_PWM_CHANNELS; i++)
-        ee.failsafe_pwm[i] = 1000;
+    for (int8_t i = 0; i < MAX_PWM_CHANNELS; i++) {
+        ee.failsafe_pwm[i] = 1500;
+    }
     ee.ppm_frame_length = 20000;
 
     ee.filter_high_channels = false;
@@ -114,16 +114,14 @@ void setDefaultSettings(void)
 // ************************************
 // set all the PWM channel outputs LOW
 
-void allOutputsLow(void)
-{
+void allOutputsLow(void) {
     CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);		// pin LOW
     CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT);		// pin LOW
     CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT);		// pin LOW
     CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT);		// pin LOW
     CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT);		// pin LOW
     CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT);		// pin LOW
-    if (ee.pwm_out_mode)
-    {	// the UART is not using the pins
+    if (ee.pwm_out_mode) {	// the UART is not using the pins
         CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT);	// pin LOW
         CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT);	// pin LOW
     }
@@ -132,12 +130,12 @@ void allOutputsLow(void)
 // ************************************
 // copy the fail-safe pwm values to the outputs and enable sail-safe mode
 
-void useFailSafeValues(void)
-{
+void useFailSafeValues(void) {
     uint8_t sreg = SREG;
     cli();
-    for (int i = 0; i < MAX_PWM_CHANNELS; i++)
+    for (int i = 0; i < MAX_PWM_CHANNELS; i++) {
         pwm_out[i] = ee.failsafe_pwm[i];
+    }
     failsafe_mode = true;								// we are in fail-safe mode
     pwm_in_frames = 0;
     average_diff = 1000;
@@ -147,13 +145,11 @@ void useFailSafeValues(void)
 // ************************************
 // feed the doggy
 
-bool feedWatchdog(void)
-{
+bool feedWatchdog(void) {
     if (WDTCSR & (1 << WDIE))
         return false;					// watchdog hasn't yet timed out
 
     // watchdog needs resetting
-
     uint8_t sreg = SREG;
     cli();
     wdt_reset();
@@ -169,49 +165,40 @@ bool feedWatchdog(void)
 // This should be the ONLY interrupt in the whole system - this is to ensure
 // nothing else upsets the output of PPM/PWM waveforms (timing is critical).
 
-ISR(TIMER1_COMPA_vect)
-{
+ISR(TIMER1_COMPA_vect) {
     if (
-        (failsafe_mode && !ee.failsafe_enabled) ||									// we are in fail-safe mode but fail-safe outputs are disabled
-        (ee.pwm_channels < MIN_PWM_CHANNELS) ||									// we have not been bound to an RC Tx
+        (failsafe_mode && !ee.failsafe_enabled) || // we are in fail-safe mode but fail-safe outputs are disabled
+        (ee.pwm_channels < MIN_PWM_CHANNELS) ||	   // we have not been bound to an RC Tx
         (ee.ppm_frame_length < MIN_PPM_FRAME_LENGTH && !ee.pwm_out_mode)	// we are in PPM output mode but the PPM frame length has not been set
-        )
-    {
+        ) {
         allOutputsLow();								// set all PWM outputs LOW
         OCR1A = (uint16_t)OCR1A + 1000;					// come back here in 1ms
         pwm_out_index = 0;								// back to channel-1
         pwm_out_total = ee.ppm_frame_length;			//
     }
-    else
-    {
-        if (!ee.pwm_out_mode)
-        {	// PPM output mode
-            if (pwm_out_index >= ((ee.pwm_channels + 1) << 1))
-            {
+    else {
+        if (!ee.pwm_out_mode) {	// PPM output mode
+            if (pwm_out_index >= ((ee.pwm_channels + 1) << 1)) {
                 pwm_out_index = 0;
                 pwm_out_total = ee.ppm_frame_length;
             }
 
-            if (!(pwm_out_index & 1))
-            {	// HIGH pulse
+            if (!(pwm_out_index & 1)) {	// HIGH pulse
                 CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT;		// pin HIGH
                 uint16_t pulse_width = PPM_HIGH_WIDTH;
                 OCR1A = (uint16_t)OCR1A + pulse_width;
                 pwm_out_total -= pulse_width;
                 pwm_out_index++;
             }
-            else
-            {	// LOW pulse
+            else {	// LOW pulse
                 CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);	// pin LOW
 
-                if (pwm_out_index >= (ee.pwm_channels << 1))
-                {	// SYNC pulse
+                if (pwm_out_index >= (ee.pwm_channels << 1)) {	// SYNC pulse
                     OCR1A = (uint16_t)OCR1A + pwm_out_total;
                     pwm_out_index = 0;						// back to channel-1
                     pwm_out_total = ee.ppm_frame_length;
                 }
-                else
-                {	// CHANNEL pulse
+                else {	// CHANNEL pulse
                     uint16_t pulse_width = pwm_out[pwm_out_index >> 1];
                     if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
                     else
@@ -223,17 +210,14 @@ ISR(TIMER1_COMPA_vect)
                 }
             }
         }
-        else
-        {	// PWM output mode
+        else {	// PWM output mode
             if (pwm_out_index >= (ee.pwm_channels << 1))
                 pwm_out_index = 0;
 
             const int chan = pwm_out_index >> 1;
 
-            if (!(pwm_out_index & 1))
-            {	// Start of channel pulse
-                switch (chan)
-                {
+            if (!(pwm_out_index & 1)) {	// Start of channel pulse
+                switch (chan) {
                 case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
                 case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
                 case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
@@ -250,10 +234,8 @@ ISR(TIMER1_COMPA_vect)
                 OCR1A = (uint16_t)OCR1A + pulse_width;
                 pwm_out_index++;
             }
-            else
-            {	// inter pulse gap
-                switch (chan)
-                {
+            else {	// inter pulse gap
+                switch (chan) {
                 case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
                 case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
                 case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
@@ -275,16 +257,14 @@ ISR(TIMER1_COMPA_vect)
         }
     }
 
-    if (ee.pwm_channels >= MIN_PWM_CHANNELS)		// we are bound to an RC Tx
-    {
+    if (ee.pwm_channels >= MIN_PWM_CHANNELS){		// we are bound to an RC Tx
         if (pwm_out_index == 0						// we are at the start of a frame
             && failsafe_mode						// we are in fail-safe mode
             && ee.failsafe_enabled					// fail-safe mode allowed
             && new_pwm_in_chans != ee.pwm_channels)	// we don't have any new RC PWM values
         {	// move servo outputs SLOWLY towards their fail-safe positions.
 
-            for (uint8_t i = 0; i < ee.pwm_channels; i++)
-            {
+            for (uint8_t i = 0; i < ee.pwm_channels; i++) {
                 int16_t in = ee.failsafe_pwm[i];
                 uint16_t out = pwm_out[i];
                 uint16_t diff = abs(in - out);
@@ -296,12 +276,8 @@ ISR(TIMER1_COMPA_vect)
             }
         }
         else {
-            if (pwm_out_index & 1)
-            {	// end of pulse we are currently outputting
-
-                if (!scanning && new_pwm_in_chans == ee.pwm_channels)
-                {	// fetch the new PWM values we should be outputting
-
+            if (pwm_out_index & 1) {	// end of pulse we are currently outputting
+                if (!scanning && new_pwm_in_chans == ee.pwm_channels) {	// fetch the new PWM values we should be outputting
                     for (uint8_t i = 0; i < ee.pwm_channels; i++)
                         pwm_out[i] = new_pwm_in[i];
                     new_pwm_in_chans = 0;
@@ -314,8 +290,7 @@ ISR(TIMER1_COMPA_vect)
                     if (ee.pwm_channels < 4) CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT);		// pin LOW
                     if (ee.pwm_channels < 5) CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT);		// pin LOW
                     if (ee.pwm_channels < 6) CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT);		// pin LOW
-                    if (ee.pwm_out_mode)
-                    {	// the UART is not using the pins
+                    if (ee.pwm_out_mode) {	// the UART is not using the pins
                         if (ee.pwm_channels < 7) CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT);	// pin LOW
                         if (ee.pwm_channels < 8) CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT);	// pin LOW
                     }
@@ -425,8 +400,7 @@ ISR(USART0_RX_vect){
 
             if (pwm_in_frames < 255) pwm_in_frames++;
 
-            if (new_pwm_in[0] <= 0)
-            {
+            if (new_pwm_in[0] <= 0) {
                 for (int8_t i = 0; i < pwm_in_index; i++) {
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
                         new_pwm_in[i] = pwm_in[i];
@@ -538,22 +512,23 @@ void processInputCapture(void) {
         return;										// input capture not yet triggered
 
     const uint16_t icr1 = (uint16_t)ICR1;					// read the captured timer value
-    const uint16_t microsecs = (uint16_t)((int16_t)icr1 - prev_icr1);
+    // const uint16_t microsecs = (uint16_t)((int16_t)icr1 - prev_icr1);
 
-    //	uint16_t microsecs;
-    //	if (icr1 < prev_icr1)
-    //		microsecs = ((uint32_t)icr1 + 65536) - prev_icr1;
-    //	else
-    //		microsecs = icr1 - prev_icr1
+    uint16_t microsecs;
+    if (icr1 < prev_icr1)
+        microsecs = icr1 + (65535u - prev_icr1) + 1u;
+    else
+        microsecs = icr1 - prev_icr1;
+    prev_icr1 = icr1;
 
     if (scanning) {	// looking a new RC Tx to bind with
         processInputCaptureScanning(microsecs);
     }
     else {	// normal mode
         if (!processInputCaptureNormal(microsecs))
-            return; // correct?
+            return;
     }
-    prev_icr1 = icr1;
+    // prev_icr1 = icr1;
 }
 
 // ************************************
