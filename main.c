@@ -27,7 +27,7 @@
 #include "main.h"
 #include "pins.h"
 
-T_PACKET packet;
+// T_PACKET packet;
 
 uint8_t state;
 
@@ -42,7 +42,7 @@ uint16_t prev_icr1;
 
 // values read from eeprom
 T_EEPROM ee;
-T_EEPROM eeprom EEMEM;
+T_EEPROM eeprom EEMEM; // generates valid eeprom-offset address
 
 volatile bool failsafe_mode;
 

@@ -173,15 +173,15 @@ typedef struct
     uint8_t  sender_id;                                 // enable sender identification (channel SENDER_ID_CHANNEL)
 } T_EEPROM;
 
-typedef struct
-{
-	uint16_t marker;
-	uint16_t rf_channel;
-	uint8_t  flags;
-	uint8_t  pwm_channels;
-	uint16_t pwm[MAX_PWM_CHANNELS];
-	uint16_t crc;
-} T_PACKET;
+// typedef struct
+// {
+// 	uint16_t marker;
+// 	uint16_t rf_channel;
+// 	uint8_t  flags;
+// 	uint8_t  pwm_channels;
+// 	uint16_t pwm[MAX_PWM_CHANNELS];
+// 	uint16_t crc;
+// } T_PACKET;
 
 #pragma pack()
 
