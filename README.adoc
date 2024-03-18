@@ -19,8 +19,127 @@ Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
 
 == Intro
 
+.Limitations of the original firmware
+
+The original firmware of the _Corona RP8D1_ 35/40MHz receiver has some drawbacks, that limits the usefullness of 
+this good receiver in some situations:
+
+* the original firmware uses some simple filtering methods for the channels pwm signals: 
+the pulse-lengths are low-pass filtered and (maybe) some other plausibility checks are done.
+* this filtering scheme is applied to all channels
+* it is not possible to disable the filtering for some or all channels
+
+The consequence is, that some old, analog multi-switch modules like _Graupner 2-16K Nr. 4150_, _Robbe / Futaba_ or other 
+are not working anymore. These multi-switch modules all use a sort of time-multiplex of the switch states (most ternary
+states) into on channel: the multiplex comprises 10 sequential pwm-pulses, the first two are synchronization impulse
+with a length of approx. 2.1ms and the following 8 impulses have lengths of 1.1ms, 1.5ms, 1.9ms for the three states 
+of every of the 8 switches.
+
+Cleary, this will not work anymore, if the pulse length are low-pass filtered. 
+
+Other limitations are:
+
+* the _Corona RP8D1_ is limited to 9 channels
+* the (mostly identical) _Henge RP8_ is limited to 8 channels
+* no serial output (e.g. `SBus`) of channel data
+
+.This replacement firmware
+
+This replacement firmware has the following features:
+
+* the filtering of the channels 5-8 can be disabled/enabled as a config option
+* combined-ppm stream can be outputted on channel-1 of the receiver instead of individual pwm-signals
+
+Not fully implemented yet:
+
+* `SBus`/`IBus`/`SumDV3` output
+* transmitter-identification (requires a transmitter modification)
+
+== Modifications
+
+The receiver containes an `atmega88a` µController. It would be too easy to simply flash this controller: the manufacturer glady made the `reset`, `miso`, `mosi` and `sck` pins of the µC available on the connectors of the receiver. *But*: the `reset` pin is 
+configured as a `GPIO` pin to be used as channel-9 output, so the normal _in-system-serial-programming_ does not work anymore.
+
+Maybe one can use _high-voltage parallel-programming_ for the `atmega88a`, but this may be difficult, because of the `QFN/MLF` package
+of the µC.
+
+The easiest solution is the desolder the original µC and replace it with a unprogrammed one. 
+In my personal case it was the easiest to use an `atmega328pb` as a replacement. 
+
+After replacing the µC it can be programmed via `ISP` in the normal way with every `AVR` programmer.
+
+Clearly, since channel-9 is wired to the `reset`-pin of the µC and we do not want us to be locked-out again, this pin remains `reset`.
+We loose channel-9 pwm-output (but we do get serial output of all channel on connector channel-7 if we want to).
+
+== Firmware
+
+.Building
+
+Make sure you have a recent `AVR` toolchan installed.
+
+Then checkout the source code and:
+
+[source]
+----
+$ make all
+----
+
+.Flashing
+
+Connect your programmer as in <<t1>>.
+
+If you are using `avrdude` then:
+
+[source]
+----
+$ sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf -U lfuse:w:0xc6:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
+----
+
+Enjoy!
+
+== Usage and configuration
+
+Once this firmware is programmed onto your receiver, you'll be able to set up the various
+options by using a similar config procedure to the original firmware (but is a bit different and
+easier to use):
+
+* Press and hold down the config button on the receiver until the LED starts
+   flashing (takes 2 seconds to start flashing).
+   
+* Release the button.
+
+* After a short pause (1 second) the LED will now blink upto 6 times once every 1.5 seconds.
+   Each single blink indicates a different config option you can choose.
+   
+If you don't select any of the config options, then after the last LED blink then the receiver
+will return back to normal mode (the LED will blink twice at this point).
+   
+To control which config option to do, you need to briefly press the button soon after the
+desired LED blink.
+   
+* 1st blink: Bind the receiver to an RC Tx (it scans the band for a strong valid signal).
+
+* 2nd blink: Enable filtering on channels 5-8.
+
+* 3nd blink: Disable filtering on channels 5-8.
+
+* 4nd blink: Disable fail-safe.
+
+* 5rd blink: Enable fail-safe (using the current RC Tx stick settings).
+
+* 6th blink: Enable PWM output mode - each of the 8 PWM channels are on their own output pin (as original firmware).
+
+* 7th blink: Enable PPM output mode - the PPM stream is outputted on the channel-1 output.
+
+* 8th blink: Reset the receiver settings back to default (unbinded, no fail-safe, PWM output mode).
+   
+   
+N.B. The LED will continually flash once every second if the receiver has not been bound to an RC Tx.
+
+
 == Hardware
 
+.Connections to the µC
 [%header]
 |===
 |Pin	| Name	| Function
@@ -58,6 +177,18 @@ Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
 |32	|PD2	|Not connected
 |===
 
-== Firmware
+[[t1]]
+.Connections of the receiver to use for the ISP-Programmer
+[%header]
+|===
+| Pin	| Name	| Programmer | Receiver Connector
+| 29    | PC6   | Reset      | Batt / Channel 9
+| 15    | PB3   | MOSI       | Channel 4
+| 16    | PB4   | MISO       | Channel 5
+| 17    | PB5   | SCK        | Channel 6
+| 5     | Gnd   | Gnd        | every Pin on bottom row
+|       |       | Vcc 5V     | every Pin on middle row
+|===
 
-== Modifications
+== Images
+
