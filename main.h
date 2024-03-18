@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 
 // #define USART_DEBUG // anble debug messages via UART (then ch7 and ch8 are not usable)
 #define MAX_FILTER_CHANNEL 4 // Channels above are not filtered

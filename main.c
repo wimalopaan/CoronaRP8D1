@@ -44,7 +44,6 @@ uint16_t prev_icr1;
 T_EEPROM ee;
 T_EEPROM eeprom EEMEM; // generates valid eeprom-offset address
 
-volatile bool failsafe_mode;
 
 uint16_t pwm_in[MAX_PWM_CHANNELS];					// microseconds
 uint16_t prev_pwm_in[MAX_PWM_CHANNELS];				// microseconds
@@ -52,9 +51,13 @@ int8_t pwm_in_index;
 int8_t pwm_in_prev_chans;
 uint8_t pwm_in_bad_pulses;
 uint16_t average_diff;
-volatile uint8_t pwm_in_frames;
 
+// read/write from ISR
+// attention: atomic rw, but non-atomic rmw
+volatile bool failsafe_mode;
+volatile uint8_t pwm_in_frames;
 volatile uint8_t new_pwm_in_chans;
+// attention: non-atomic rmw, use ATOMIC_BLOCK outside ISR
 volatile uint16_t new_pwm_in[MAX_PWM_CHANNELS];		// microseconds
 
 uint16_t pwm_out[MAX_PWM_CHANNELS];					// microseconds
@@ -225,7 +228,7 @@ ISR(TIMER1_COMPA_vect)
             if (pwm_out_index >= (ee.pwm_channels << 1))
                 pwm_out_index = 0;
 
-            int chan = pwm_out_index >> 1;
+            const int chan = pwm_out_index >> 1;
 
             if (!(pwm_out_index & 1))
             {	// Start of channel pulse
@@ -280,7 +283,7 @@ ISR(TIMER1_COMPA_vect)
             && new_pwm_in_chans != ee.pwm_channels)	// we don't have any new RC PWM values
         {	// move servo outputs SLOWLY towards their fail-safe positions.
 
-            for (int i = 0; i < ee.pwm_channels; i++)
+            for (uint8_t i = 0; i < ee.pwm_channels; i++)
             {
                 int16_t in = ee.failsafe_pwm[i];
                 uint16_t out = pwm_out[i];
@@ -292,14 +295,14 @@ ISR(TIMER1_COMPA_vect)
                 pwm_out[i] = out;
             }
         }
-        else
+        else {
             if (pwm_out_index & 1)
             {	// end of pulse we are currently outputting
 
                 if (!scanning && new_pwm_in_chans == ee.pwm_channels)
                 {	// fetch the new PWM values we should be outputting
 
-                    for (int i = 0; i < ee.pwm_channels; i++)
+                    for (uint8_t i = 0; i < ee.pwm_channels; i++)
                         pwm_out[i] = new_pwm_in[i];
                     new_pwm_in_chans = 0;
                     failsafe_mode = false;
@@ -318,6 +321,7 @@ ISR(TIMER1_COMPA_vect)
                     }
                 }
             }
+        }
     }
 }
 
@@ -423,8 +427,11 @@ ISR(USART0_RX_vect){
 
             if (new_pwm_in[0] <= 0)
             {
-                for (int i = 0; i < pwm_in_index; i++)
-                    new_pwm_in[i] = pwm_in[i];
+                for (int i = 0; i < pwm_in_index; i++) {
+                    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                        new_pwm_in[i] = pwm_in[i];
+                    }
+                }
             }
 
             uint16_t new_average_diff = 0;
@@ -454,16 +461,21 @@ ISR(USART0_RX_vect){
 
                     uint16_t diff = abs(in - out);
                     diff = (diff * MIN_FILTER_VALUE) / average_diff;
-                    if (diff < 1) diff = 1;
+
+                    if (diff < 2) diff = 0;
 
                     if (out < in) out += diff;
                     else
                         if (out > in) out -= diff;
 
-                    new_pwm_in[i] = out;
+                    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                        new_pwm_in[i] = out;
+                    }
                 }
                 else {
-                    new_pwm_in[i] = pwm_in[i];
+                    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                        new_pwm_in[i] = pwm_in[i];
+                    }
                 }
             }
 
