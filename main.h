@@ -31,6 +31,9 @@
 #include <util/delay.h>
 
 // #define USART_DEBUG // anble debug messages via UART
+#define MAX_FILTER_CHANNEL 4 // Channels above are not filtered
+#define SENDER_ID_CHANNEL 8 // Channel 9 sould contain sender ID (8-bit time multiplex (4 frames, each 2 bits)
+#define SBUS_OUT // sbus output on serial port
 
 #define low(word_reg)				((uint8_t)(word_reg))
 #define high(word_reg)				((uint8_t)(word_reg >> 8))
@@ -161,6 +164,9 @@ typedef struct
 	bool     failsafe_enabled;							// false = no fail-safe. true = fail-safe allowed
 	uint16_t failsafe_pwm[MAX_PWM_CHANNELS];			// microseconds
 	uint16_t ppm_frame_length;							// microseconds
+    bool     filter_high_channels;                      // enable channels >= MAX_FILTER_CHANNEL
+    bool     enable_sender_id;                          // enable sender identification (channel SENDER_ID_CHANNEL)
+    uint8_t  sender_id;                                 // enable sender identification (channel SENDER_ID_CHANNEL)
 } T_EEPROM;
 
 typedef struct

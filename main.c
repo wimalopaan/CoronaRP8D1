@@ -97,6 +97,10 @@ void setDefaultSettings(void)
         ee.failsafe_pwm[i] = 1000;
     ee.ppm_frame_length = 20000;
 
+    ee.filter_high_channels = false;
+    ee.enable_sender_id = false;
+    ee.sender_id = 0;
+
     // write the settings back to eeprom
     eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
     eeprom_busy_wait();
@@ -164,107 +168,109 @@ bool feedWatchdog(void)
 
 ISR(TIMER1_COMPA_vect)
 {
-    // if ((failsafe_mode && !ee.failsafe_enabled)									// we are in fail-safe mode but fail-safe outputs are disabled
-    // 	|| ee.pwm_channels < MIN_PWM_CHANNELS									// we have not been bound to an RC Tx
-    // 	|| (ee.ppm_frame_length < MIN_PPM_FRAME_LENGTH && !ee.pwm_out_mode))	// we are in PPM output mode but the PPM frame length has not been set
-    // {
-    // 	allOutputsLow();								// set all PWM outputs LOW
-    // 	OCR1A = (uint16_t)OCR1A + 1000;					// come back here in 1ms
-    // 	pwm_out_index = 0;								// back to channel-1
-    // 	pwm_out_total = ee.ppm_frame_length;			//
-    // }
-    // else
-    // {
-    // 	if (!ee.pwm_out_mode)
-    // 	{	// PPM output mode
-    // 		if (pwm_out_index >= ((ee.pwm_channels + 1) << 1))
-    // 		{
-    // 			pwm_out_index = 0;
-    // 			pwm_out_total = ee.ppm_frame_length;
-    // 		}
-
-    // 		if (!(pwm_out_index & 1))
-    // 		{	// HIGH pulse
-    // 			CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT;		// pin HIGH
-    // 			uint16_t pulse_width = PPM_HIGH_WIDTH;
-    // 			OCR1A = (uint16_t)OCR1A + pulse_width;
-    // 			pwm_out_total -= pulse_width;
-    // 			pwm_out_index++;
-    // 		}
-    // 		else
-    // 		{	// LOW pulse
-    // 			CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);	// pin LOW
-
-    // 			if (pwm_out_index >= (ee.pwm_channels << 1))
-    // 			{	// SYNC pulse
-    // 				OCR1A = (uint16_t)OCR1A + pwm_out_total;
-    // 				pwm_out_index = 0;						// back to channel-1
-    // 				pwm_out_total = ee.ppm_frame_length;
-    // 			}
-    // 			else
-    // 			{	// CHANNEL pulse
-    // 				uint16_t pulse_width = pwm_out[pwm_out_index >> 1];
-    // 				if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
-    // 				else
-    // 				if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
-    // 				pulse_width -= PPM_HIGH_WIDTH;
-    // 				OCR1A = (uint16_t)OCR1A + pulse_width;
-    // 				pwm_out_total -= pulse_width;
-    // 				pwm_out_index++;
-    // 			}
-    // 		}
-    // 	}
-    // 	else
-    {	// PWM output mode
-        if (pwm_out_index >= (ee.pwm_channels << 1))
-            pwm_out_index = 0;
-
-        int chan = pwm_out_index >> 1;
-
-        if (!(pwm_out_index & 1))
-        {	// Start of channel pulse
-            switch (chan)
+    if (
+        (failsafe_mode && !ee.failsafe_enabled) ||									// we are in fail-safe mode but fail-safe outputs are disabled
+        (ee.pwm_channels < MIN_PWM_CHANNELS) ||									// we have not been bound to an RC Tx
+        (ee.ppm_frame_length < MIN_PPM_FRAME_LENGTH && !ee.pwm_out_mode)	// we are in PPM output mode but the PPM frame length has not been set
+        )
+    {
+        allOutputsLow();								// set all PWM outputs LOW
+        OCR1A = (uint16_t)OCR1A + 1000;					// come back here in 1ms
+        pwm_out_index = 0;								// back to channel-1
+        pwm_out_total = ee.ppm_frame_length;			//
+    }
+    else
+    {
+        if (!ee.pwm_out_mode)
+        {	// PPM output mode
+            if (pwm_out_index >= ((ee.pwm_channels + 1) << 1))
             {
-            case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
-            case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
-            case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
-            case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
-            case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
-            case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
-            case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
-            case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+                pwm_out_index = 0;
+                pwm_out_total = ee.ppm_frame_length;
             }
-            uint16_t pulse_width = pwm_out[chan];
-            if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
+
+            if (!(pwm_out_index & 1))
+            {	// HIGH pulse
+                CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT;		// pin HIGH
+                uint16_t pulse_width = PPM_HIGH_WIDTH;
+                OCR1A = (uint16_t)OCR1A + pulse_width;
+                pwm_out_total -= pulse_width;
+                pwm_out_index++;
+            }
             else
-                if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
-            OCR1A = (uint16_t)OCR1A + pulse_width;
-            pwm_out_index++;
+            {	// LOW pulse
+                CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);	// pin LOW
+
+                if (pwm_out_index >= (ee.pwm_channels << 1))
+                {	// SYNC pulse
+                    OCR1A = (uint16_t)OCR1A + pwm_out_total;
+                    pwm_out_index = 0;						// back to channel-1
+                    pwm_out_total = ee.ppm_frame_length;
+                }
+                else
+                {	// CHANNEL pulse
+                    uint16_t pulse_width = pwm_out[pwm_out_index >> 1];
+                    if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
+                    else
+                        if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
+                    pulse_width -= PPM_HIGH_WIDTH;
+                    OCR1A = (uint16_t)OCR1A + pulse_width;
+                    pwm_out_total -= pulse_width;
+                    pwm_out_index++;
+                }
+            }
         }
         else
-        {	// inter pulse gap
-            switch (chan)
-            {
-            case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
-            case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
-            case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
-            case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
-            case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
-            case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
-            case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
-            case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+        {	// PWM output mode
+            if (pwm_out_index >= (ee.pwm_channels << 1))
+                pwm_out_index = 0;
+
+            int chan = pwm_out_index >> 1;
+
+            if (!(pwm_out_index & 1))
+            {	// Start of channel pulse
+                switch (chan)
+                {
+                case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
+                case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
+                case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
+                case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
+                case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
+                case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
+                case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
+                case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+                }
+                uint16_t pulse_width = pwm_out[chan];
+                if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
+                else
+                    if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
+                OCR1A = (uint16_t)OCR1A + pulse_width;
+                pwm_out_index++;
             }
-            uint16_t pulse_width = pwm_out[chan];
-            if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
             else
-                if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
-            pulse_width = (MAX_PWM_WIDTH + INTER_PWM_GAP) - pulse_width;
-            OCR1A = (uint16_t)OCR1A + pulse_width;
-            if (++pwm_out_index >= (ee.pwm_channels << 1))
-                pwm_out_index = 0;	// back to channel-1
+            {	// inter pulse gap
+                switch (chan)
+                {
+                case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
+                case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
+                case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
+                case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
+                case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
+                case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
+                case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
+                case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+                }
+                uint16_t pulse_width = pwm_out[chan];
+                if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
+                else
+                    if (pulse_width > MAX_PWM_WIDTH) pulse_width = MAX_PWM_WIDTH;
+                pulse_width = (MAX_PWM_WIDTH + INTER_PWM_GAP) - pulse_width;
+                OCR1A = (uint16_t)OCR1A + pulse_width;
+                if (++pwm_out_index >= (ee.pwm_channels << 1))
+                    pwm_out_index = 0;	// back to channel-1
+            }
         }
     }
-    // }
 
     if (ee.pwm_channels >= MIN_PWM_CHANNELS)		// we are bound to an RC Tx
     {
@@ -405,7 +411,11 @@ ISR(USART0_RX_vect){
 
     if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0)
     {	// SYNC pulse, or waiting for a SYNC pulse
-
+#ifdef USART_DEBUG
+        uartTxByteWait(0x05);
+        uartTxByteWait(pwm_in_index);
+        uartTxByteWait(pwm_in_frames);
+#endif
         if (pwm_in_index == ee.pwm_channels)
         {	// same number of channels as the RC TX we are bound too
 
@@ -436,11 +446,9 @@ ISR(USART0_RX_vect){
             else
                 if (average_diff > MAX_FILTER_VALUE) average_diff = MAX_FILTER_VALUE;	// limit maximum filtering
 
-#define MAX_FILTER_CHANNEL 4
-
             for (int i = 0; i < pwm_in_index; i++)
             {
-                if (i < MAX_FILTER_CHANNEL) {
+                if ((i < MAX_FILTER_CHANNEL) || ee.filter_high_channels) {
                     int16_t in = pwm_in[i];
                     uint16_t out = new_pwm_in[i];
 
@@ -463,6 +471,7 @@ ISR(USART0_RX_vect){
             {
                 //				LED_PIN |= 1 << LED_BIT;					// led TOGGLE... TEST ONLY
                 new_pwm_in_chans = pwm_in_index;			// let the pwm output routine use the new values
+                failsafe_mode = false;
             }
 
             // remember this new block of pulse widths
@@ -798,7 +807,7 @@ inline bool uartTxByteNoWait(uint8_t b)
 void processExec(void)
 {
     if (TIFR0 & (1 << TOV0))
-    {	// timer-0 overflowed
+    {	// timer-0 overflowed: 1,024ms
         TIFR0 |= 1 << TOV0;	// reset flag
 
         if (last_ppm_frame_received_timer < 255)
@@ -825,7 +834,7 @@ void processExec(void)
 
     if (!failsafe_mode									// we are not in fail-safe mode
         && ee.pwm_channels >= MIN_PWM_CHANNELS			// we are bound to an RC Tx
-        && last_ppm_frame_received_timer >= 16)			// not received any valid PPM frames in the last 512ms
+        && last_ppm_frame_received_timer >= 128)	    // not received any valid PPM frames in the last 128ms
     {											// enter fail-safe mode then
         setPLLChannel(ee.rf_channel);			// just incase the PLL has lost it's settings
         //		useFailSafeValues();					// fall back to the failsafe settings
@@ -833,6 +842,9 @@ void processExec(void)
         failsafe_mode = true;					// fall back to the failsafe settings
         pwm_in_frames = 0;
         pwm_in_index = -1;
+#ifdef USART_DEBUG
+        uartTxByteWait(0x03);
+#endif
     }
 
     if (state != state_normal)
@@ -881,7 +893,7 @@ void scan(void)
 {
     scanning = true;
 
-    //	useFailSafeValues();								// use the fail-safe values while scanning for a transmitter
+    // useFailSafeValues();								// use the fail-safe values while scanning for a transmitter
     failsafe_mode = true;
 
     LED_PORT &= ~(1 << LED_BIT);						// led OFF
