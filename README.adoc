@@ -53,6 +53,7 @@ This replacement firmware has the following features:
 Not fully implemented yet:
 
 * `SBus`/`IBus`/`SumDV3` output
+* Mutli-Switch decoder in the receiver itself (use some of the channel-outputs as switch outputs)
 * transmitter-identification (requires a transmitter modification)
 
 == Modifications
