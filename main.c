@@ -322,29 +322,26 @@ ISR(USART0_RX_vect){
 // Do this in the exec (rather than interrupt) so as not to interfere with the PPM/PWM waveform output generation.
 // Just make sure you call this as often and quickly as possible.
 
-/*inline */void processInputCaptureScanning(int16_t microsecs)
-{	// the received PPM stream is expected to be clean (very strong signal) .. so don't bother with any kind of noise reduction/detection
+void processInputCaptureScanning(int16_t microsecs) {
+// the received PPM stream is expected to be clean (very strong signal) .. so don't bother with any kind of noise reduction/detection
 
-    if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0)
-    {	// SYNC pulse, or waiting for a SYNC pulse
+    if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0) {	// SYNC pulse, or waiting for a SYNC pulse
+        if (pwm_in_index >= MIN_PWM_CHANNELS) {	// we have received channels
 
-        if (pwm_in_index >= MIN_PWM_CHANNELS)
-        {	// we have received channels
-
-            if (pwm_in_frames < 1 || pwm_in_index != pwm_in_prev_chans)
-            {
+            if (pwm_in_frames < 1 || pwm_in_index != pwm_in_prev_chans) {
                 pwm_in_frames = 1;
             }
-            else
-            {	// same number of channels
+            else {	// same number of channels
                 last_ppm_frame_received_timer = 0;	// reset timer
                 if (pwm_in_frames < 255) pwm_in_frames++;
             }
 
             // save the received channel pulse widths
-            for (int8_t i = 0; i < pwm_in_index; i++)
-                new_pwm_in[i] = pwm_in[i];
-
+            for (int8_t i = 0; i < pwm_in_index; i++) {
+                ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                    new_pwm_in[i] = pwm_in[i];
+                }
+            }
             new_pwm_in_chans = pwm_in_index;
             pwm_in_prev_chans = pwm_in_index;
         }
@@ -372,34 +369,27 @@ ISR(USART0_RX_vect){
     }
 }
 
-/*inline */bool processInputCaptureNormal(int16_t microsecs)
-{
+bool processInputCaptureNormal(int16_t microsecs) {
     if (ee.pwm_channels < MIN_PWM_CHANNELS)
         return false;			// we have not yet been bound to an RC Tx .. ignore the input PPM stream
 
-    if (microsecs < MIN_PWM_WIDTH)
-    {	// ignore unusually short pulses
+    if (microsecs < MIN_PWM_WIDTH){	// ignore unusually short pulses
         if (pwm_in_bad_pulses < 255) pwm_in_bad_pulses++;
-        if (pwm_in_bad_pulses >= 5)
-        {	// to many bad pulses
+        if (pwm_in_bad_pulses >= 5) {	// to many bad pulses
             pwm_in_index = -1;
             if (failsafe_mode) pwm_in_frames = 0;			// don't come out of fail-safe too easily
         }
         return false;
     }
 
-    if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0)
-    {	// SYNC pulse, or waiting for a SYNC pulse
+    if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0) {	// SYNC pulse, or waiting for a SYNC pulse
 #ifdef USART_DEBUG
         uartTxByteWait(0x05);
         uartTxByteWait(pwm_in_index);
         uartTxByteWait(pwm_in_frames);
 #endif
-        if (pwm_in_index == ee.pwm_channels)
-        {	// same number of channels as the RC TX we are bound too
-
+        if (pwm_in_index == ee.pwm_channels) {	// same number of channels as the RC TX we are bound too
             if (pwm_in_frames < 255) pwm_in_frames++;
-
             if (new_pwm_in[0] <= 0) {
                 for (int8_t i = 0; i < pwm_in_index; i++) {
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -409,17 +399,12 @@ ISR(USART0_RX_vect){
             }
 
             uint16_t new_average_diff = 0;
-            for (int8_t i = 0; i < pwm_in_index; i++)
-            {
-                uint16_t diff = abs((int16_t)pwm_in[i] - prev_pwm_in[i]);
+            for (int8_t i = 0; i < pwm_in_index; i++) {
+                const uint16_t diff = abs((int16_t)pwm_in[i] - (int16_t)prev_pwm_in[i]);
                 new_average_diff += diff;
             }
             new_average_diff /= pwm_in_index;
-
             average_diff = (average_diff + new_average_diff) >> 1;
-
-#define MIN_FILTER_VALUE		16						// no filtering
-#define MAX_FILTER_VALUE		(MIN_FILTER_VALUE * 80)	// max filtering
 
             if (average_diff < MIN_FILTER_VALUE) {
                 average_diff = MIN_FILTER_VALUE;	// limit minimum filtering
@@ -428,17 +413,20 @@ ISR(USART0_RX_vect){
                 average_diff = MAX_FILTER_VALUE;	// limit maximum filtering
             }
 
-            for (int8_t i = 0; i < pwm_in_index; i++)
-            {
+            for (int8_t i = 0; i < pwm_in_index; i++) {
                 if ((i < MAX_FILTER_CHANNEL) || ee.filter_high_channels) {
-                    int16_t in = pwm_in[i];
+                    uint16_t in = (4 * pwm_in[i] + 6 * prev_pwm_in[i]) / 10;
                     uint16_t out = new_pwm_in[i];
 
                     uint16_t diff = abs(in - out);
                     diff = (diff * MIN_FILTER_VALUE) / average_diff;
 
-                    if (diff < 2) diff = 0;
-
+                    if (diff < MIN_DIFF) {
+                        diff = 0;
+                    }
+                    else if (diff > MAX_DIFF) {
+                        diff = MAX_DIFF;
+                    }
                     if (out < in) {
                         out += diff;
                     }
@@ -457,8 +445,7 @@ ISR(USART0_RX_vect){
                 }
             }
 
-            if (pwm_in_frames >= 4)
-            {
+            if (pwm_in_frames >= 4) {
                 new_pwm_in_chans = pwm_in_index;			// let the pwm output routine use the new values
                 failsafe_mode = false;
             }
@@ -469,31 +456,26 @@ ISR(USART0_RX_vect){
 
             last_ppm_frame_received_timer = 0;				// reset PPM frame timer
         }
-        else
-        {	// wrong number of channels
+        else {	// wrong number of channels
             if (failsafe_mode && pwm_in_index > 0)
                 pwm_in_frames = 0;
         }
 
         pwm_in_index = 0;
 
-        if (microsecs >= MIN_SYNC_WIDTH)
-        {	// a good SYNC pulse
+        if (microsecs >= MIN_SYNC_WIDTH) {	// a good SYNC pulse
             pwm_in_bad_pulses = 0;
         }
-        else
-        {	// a rather short SYNC pulse
+        else {	// a rather short SYNC pulse
             if (pwm_in_bad_pulses < 255) pwm_in_bad_pulses++;
             if (failsafe_mode) pwm_in_frames = 0;			// don't come out of fail-safe too easily
             return false;
         }
     }
-    else
-    {	// CHANNEL pulse
+    else {	// CHANNEL pulse
         if (pwm_in_index < MAX_PWM_CHANNELS)
             pwm_in[pwm_in_index++] = microsecs;				// save the new pulse width value
     }
-
     return true;
 }
 
@@ -663,6 +645,7 @@ void startTimer0(void) {
 
     // Normal mode
     // IOclk/1024 (128us)
+    // 32 ms OVF
     TCCR0A = (0<<COM0A1) | (0<<COM0A0) | (0<<COM0B1) | (0<<COM0B0) | (0<<WGM01) | (0<<WGM00);
     TCCR0B = (0<<FOC0A) | (0<<FOC0B) | (0<<WGM02) | (1<<CS02) | (0<<CS01) | (1<<CS00);
 
@@ -813,7 +796,7 @@ void processExec(void)
 
     if (!failsafe_mode									// we are not in fail-safe mode
         && ee.pwm_channels >= MIN_PWM_CHANNELS			// we are bound to an RC Tx
-        && last_ppm_frame_received_timer >= 128)	    // not received any valid PPM frames in the last 128ms
+        && last_ppm_frame_received_timer >= 16)	    // not received any valid PPM frames in the last 512ms
     {											// enter fail-safe mode then
         setPLLChannel(ee.rf_channel);			// just incase the PLL has lost it's settings
         //		useFailSafeValues();					// fall back to the failsafe settings

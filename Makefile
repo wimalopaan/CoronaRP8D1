@@ -1,4 +1,7 @@
+# erase eeprom
 # sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf -U lfuse:w:0xc6:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
+# preserve eeprom
+# sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf -U lfuse:w:0xc6:m -U hfuse:w:0xd1:m -U efuse:w:0xff:m
 # sudo avrdude -p atmega328pb -P usb -c avrisp2  -U flash:w:main.elf
 
 MCU = atmega328pb

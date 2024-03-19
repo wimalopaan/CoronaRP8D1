@@ -87,6 +87,12 @@ enum {
 
 #define INTER_PWM_GAP				100			// microseconds
 
+#define MIN_FILTER_VALUE		    16						// no filtering
+#define MAX_FILTER_VALUE		    (MIN_FILTER_VALUE * 80)	// max filtering
+
+#define MAX_DIFF                    75
+#define MIN_DIFF                    2
+
 // UK 35MHz
 // #define PLL_VCO_OFFSET		10700000ul	// Hz
 // #define CH_STEP				   10000	// Hz .. 10kHz channel spacing
