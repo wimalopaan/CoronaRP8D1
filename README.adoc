@@ -19,7 +19,7 @@ Wilhelm Meier <wilhelm.wm.meier@googlemail.com>
 
 == Intro
 
-.Limitations of the original firmware
+=== Limitations of the original firmware
 
 The original firmware of the _Corona RP8D1_ 35/40MHz receiver has some drawbacks, that limits the usefullness of 
 this good receiver in some situations:
@@ -43,7 +43,7 @@ Other limitations are:
 * the (mostly identical) _Henge RP8_ is limited to 8 channels
 * no serial output (e.g. `SBus`) of channel data
 
-.This replacement firmware
+=== This replacement firmware
 
 This replacement firmware has the following features:
 
