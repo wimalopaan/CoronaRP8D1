@@ -33,10 +33,12 @@
 
 // #define USART_DEBUG // anble debug messages via UART (then ch7 and ch8 are not usable)
 #define MAX_FILTER_CHANNEL 4 // Channels above are not filtered
+#define SWITCH_CHANNELS_FROM 4 // use chx (x >= SWITCH_CHANNLES_FROM) as switching outputs for multi-switch protocols
+#define SWITCH_CHANNELS_DEFAULT false
+#define MULTI_SWITCHES 8 // number of switches decoded
 // tbd
 #define SENDER_ID_CHANNEL 8 // Channel 9 sould contain sender ID (8-bit time multiplex (4 frames, each 2 bits)
 #define SBUS_OUT // sbus output on serial port
-#define SWITCH_CHANNELS // use ch4-8 as switching outputs for mutl-switch protocols
 
 #define low(word_reg)				((uint8_t)(word_reg))
 #define high(word_reg)				((uint8_t)(word_reg >> 8))
@@ -63,6 +65,8 @@ enum {
     state_scan_option, // 1 blink
     state_enable_filter_option, // 2 blink
     state_disable_filter_option, // 3 blink
+    state_enable_switch_option, // 4
+    state_disable_switch_option, // 5
 	state_disable_failsafe_option,
 	state_enable_failsafe_option,
 	state_enable_pwm_option,
@@ -94,6 +98,10 @@ enum {
 
 #define MAX_DIFF                    75
 #define MIN_DIFF                    2
+
+#define MULTI_SYNC_WIDTH            2050
+#define MULTI_SYNC_HIGH             1750
+#define MULTI_SYNC_LOW              1250
 
 // UK 35MHz
 // #define PLL_VCO_OFFSET		10700000ul	// Hz
@@ -166,6 +174,8 @@ enum {
 
 #pragma pack(1)
 
+#define EEPROM_VERSION 44
+
 typedef struct
 {
     uint8_t  bad_byte_dont_use;  						// the 1st byte of eeprom is a none problem
@@ -177,6 +187,8 @@ typedef struct
 	uint16_t failsafe_pwm[MAX_PWM_CHANNELS];			// microseconds
 	uint16_t ppm_frame_length;							// microseconds
     bool     filter_high_channels;                      // enable channels >= MAX_FILTER_CHANNEL
+    bool     switchChannels;                            // use ch4-8 as switching channels / multi-channel
+    uint8_t  multiSwitchChannel;                        // rc-channel to use for switching
     // not implemented yet
     bool     enable_sender_id;                          // enable sender identification (channel SENDER_ID_CHANNEL)
     uint8_t  sender_id;                                 // enable sender identification (channel SENDER_ID_CHANNEL)

@@ -39,7 +39,7 @@ uint8_t last_ppm_frame_received_timer;
 uint16_t prev_icr1;
 
 // values read from eeprom
-T_EEPROM ee;
+volatile T_EEPROM ee;
 T_EEPROM eeprom EEMEM; // generates valid eeprom-offset address
 
 uint16_t pwm_in[MAX_PWM_CHANNELS];					// microseconds
@@ -54,6 +54,9 @@ uint16_t average_diff;
 volatile bool failsafe_mode;
 volatile uint8_t pwm_in_frames;
 volatile uint8_t new_pwm_in_chans;
+
+volatile uint8_t switchValues[MULTI_SWITCHES]; // multi-switch: switch 0-3, only on/off
+
 // attention: non-atomic rmw, use ATOMIC_BLOCK outside ISR
 volatile uint16_t new_pwm_in[MAX_PWM_CHANNELS];		// microseconds
 
@@ -82,7 +85,7 @@ void setDefaultSettings(void) {
 #ifdef USART_DEBUG
     uartTxByteWait(0x01);
 #endif
-    ee.magic_number = 42;
+    ee.magic_number = EEPROM_VERSION;
     ee.rf_channel = START_CHAN;
     ee.pwm_channels = 0;
 #ifdef USART_DEBUG
@@ -97,6 +100,10 @@ void setDefaultSettings(void) {
     ee.ppm_frame_length = 20000;
 
     ee.filter_high_channels = false;
+
+    ee.switchChannels = SWITCH_CHANNELS_DEFAULT;
+    ee.multiSwitchChannel = 7; // channel 8
+
     ee.enable_sender_id = false;
     ee.sender_id = 0;
 
@@ -213,15 +220,44 @@ ISR(TIMER1_COMPA_vect) {
             const int chan = pwm_out_index >> 1;
 
             if (!(pwm_out_index & 1)) {	// Start of channel pulse
-                switch (chan) {
-                case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
-                case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
-                case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
-                case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
-                case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
-                case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
-                case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
-                case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+                if (ee.switchChannels && (chan >= SWITCH_CHANNELS_FROM)) {
+                    const uint8_t sw = switchValues[chan - SWITCH_CHANNELS_FROM];
+                    if (sw == 2) {
+                        switch (chan) {
+                        case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
+                        case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
+                        case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
+                        case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
+                        case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
+                        case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
+                        case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
+                        case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+                        }
+                    }
+                    else {
+                        switch (chan) {
+                        case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
+                        case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
+                        case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
+                        case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
+                        case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
+                        case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
+                        case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
+                        case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+                        }
+                    }
+                }
+                else {
+                    switch (chan) {
+                    case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
+                    case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
+                    case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
+                    case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
+                    case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
+                    case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
+                    case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
+                    case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+                    }
                 }
                 uint16_t pulse_width = pwm_out[chan];
                 if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
@@ -231,15 +267,20 @@ ISR(TIMER1_COMPA_vect) {
                 pwm_out_index++;
             }
             else {	// inter pulse gap
-                switch (chan) {
-                case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
-                case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
-                case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
-                case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
-                case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
-                case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
-                case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
-                case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+                if (ee.switchChannels && (chan >= SWITCH_CHANNELS_FROM)) {
+
+                }
+                else {
+                    switch (chan) {
+                    case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
+                    case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
+                    case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
+                    case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
+                    case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
+                    case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
+                    case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
+                    case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+                    }
                 }
                 uint16_t pulse_width = pwm_out[chan];
                 if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
@@ -272,6 +313,7 @@ ISR(TIMER1_COMPA_vect) {
             }
         }
         else {
+            const int chan = pwm_out_index >> 1;
             if (pwm_out_index & 1) {	// end of pulse we are currently outputting
                 if (!scanning && new_pwm_in_chans == ee.pwm_channels) {	// fetch the new PWM values we should be outputting
                     for (uint8_t i = 0; i < ee.pwm_channels; i++)
@@ -279,16 +321,22 @@ ISR(TIMER1_COMPA_vect) {
                     new_pwm_in_chans = 0;
                     failsafe_mode = false;
 
-                    // set the unused channel outputs LOW
-                    if (ee.pwm_channels < 1) CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);		// pin LOW
-                    if (ee.pwm_channels < 2) CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT);		// pin LOW
-                    if (ee.pwm_channels < 3) CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT);		// pin LOW
-                    if (ee.pwm_channels < 4) CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT);		// pin LOW
-                    if (ee.pwm_channels < 5) CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT);		// pin LOW
-                    if (ee.pwm_channels < 6) CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT);		// pin LOW
-                    if (ee.pwm_out_mode) {	// the UART is not using the pins
-                        if (ee.pwm_channels < 7) CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT);	// pin LOW
-                        if (ee.pwm_channels < 8) CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT);	// pin LOW
+                    if (ee.switchChannels && (chan >= SWITCH_CHANNELS_FROM)) {
+
+                    }
+                    else {
+                        // set the unused channel outputs LOW
+                        if (ee.pwm_channels < 1) CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);		// pin LOW
+                        if (ee.pwm_channels < 2) CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT);		// pin LOW
+                        if (ee.pwm_channels < 3) CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT);		// pin LOW
+                        if (ee.pwm_channels < 4) CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT);		// pin LOW
+                        if (ee.pwm_channels < 5) CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT);		// pin LOW
+                        if (ee.pwm_channels < 6) CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT);		// pin LOW
+                        if (ee.pwm_out_mode) {	// the UART is not using the pins
+                            if (ee.pwm_channels < 7) CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT);	// pin LOW
+                            if (ee.pwm_channels < 8) CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT);	// pin LOW
+                        }
+
                     }
                 }
             }
@@ -319,7 +367,7 @@ ISR(USART0_RX_vect){
 // Just make sure you call this as often and quickly as possible.
 
 void processInputCaptureScanning(int16_t microsecs) {
-// the received PPM stream is expected to be clean (very strong signal) .. so don't bother with any kind of noise reduction/detection
+    // the received PPM stream is expected to be clean (very strong signal) .. so don't bother with any kind of noise reduction/detection
 
     if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0) {	// SYNC pulse, or waiting for a SYNC pulse
         if (pwm_in_index >= MIN_PWM_CHANNELS) {	// we have received channels
@@ -408,7 +456,33 @@ bool processInputCaptureNormal(int16_t microsecs) {
             else if (average_diff > MAX_FILTER_VALUE) {
                 average_diff = MAX_FILTER_VALUE;	// limit maximum filtering
             }
-
+            if (ee.switchChannels) {
+                static uint8_t multiSyncCount = 0;
+                static uint8_t multiSyncPulse = MULTI_SWITCHES;
+                if (pwm_in[ee.multiSwitchChannel] >= MULTI_SYNC_WIDTH) {
+                    ++multiSyncCount;
+                    if (multiSyncCount == 2) {
+                        multiSyncPulse = 0;
+                    }
+                }
+                else {
+                    if (multiSyncPulse < MULTI_SWITCHES) {
+                        if (pwm_in[ee.multiSwitchChannel] > MULTI_SYNC_HIGH) {
+                            switchValues[multiSyncPulse] = 2;
+                        }
+                        else if (pwm_in[ee.multiSwitchChannel] < MULTI_SYNC_LOW) {
+                            switchValues[multiSyncPulse] = 0;
+                        }
+                        else {
+                            switchValues[multiSyncPulse] = 1;
+                        }
+                        ++multiSyncPulse;
+                        if (multiSyncPulse >= MULTI_SWITCHES) {
+                            multiSyncCount = 0;
+                        }
+                    }
+                }
+            }
             for (int8_t i = 0; i < pwm_in_index; i++) {
                 if ((i < MAX_FILTER_CHANNEL) || ee.filter_high_channels) {
                     uint16_t in = (4 * pwm_in[i] + 6 * prev_pwm_in[i]) / 10;
@@ -1061,6 +1135,16 @@ bool processState(void)
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
         eeprom_busy_wait();
         break;
+    case state_enable_switch_option:
+        ee.switchChannels = true;
+        eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
+        eeprom_busy_wait();
+        break;
+    case state_disable_switch_option:
+        ee.switchChannels = false;
+        eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
+        eeprom_busy_wait();
+        break;
     case state_disable_failsafe_option:			// disable fail-safe option
         ee.failsafe_enabled = false;
         eeprom_write_block((void*)(&ee), (void*)(&eeprom), sizeof(T_EEPROM));
@@ -1219,7 +1303,7 @@ int main(void)
     uartTxByteWait(ee.pwm_channels);
 #endif
 
-    if (ee.magic_number != 42) {
+    if (ee.magic_number != EEPROM_VERSION) {
         setDefaultSettings();		// an error was found in the values we read from eeprom .. revert to default settings
     }
 
