@@ -49,11 +49,11 @@ This replacement firmware has the following features:
 
 * the filtering of the channels 5-8 can be disabled/enabled as a config option
 * combined-ppm stream can be outputted on channel-1 of the receiver instead of individual pwm-signals
+* Mutli-Switch decoder in the receiver itself (use some of the channel-outputs as switch outputs)
 
 Not fully implemented yet:
 
 * `SBus`/`IBus`/`SumDV3` output
-* Mutli-Switch decoder in the receiver itself (use some of the channel-outputs as switch outputs)
 * transmitter-identification (requires a transmitter modification)
 
 == Modifications
@@ -124,15 +124,19 @@ desired LED blink.
 
 * 3nd blink: Disable filtering on channels 5-8.
 
-* 4nd blink: Disable fail-safe.
+* 4nd blink: Enable switch output on channels 4-8.
 
-* 5rd blink: Enable fail-safe (using the current RC Tx stick settings).
+* 5nd blink: Disable switch output on channels 4-8.
 
-* 6th blink: Enable PWM output mode - each of the 8 PWM channels are on their own output pin (as original firmware).
+* 6nd blink: Disable fail-safe.
 
-* 7th blink: Enable PPM output mode - the PPM stream is outputted on the channel-1 output.
+* 7rd blink: Enable fail-safe (using the current RC Tx stick settings).
 
-* 8th blink: Reset the receiver settings back to default (unbinded, no fail-safe, PWM output mode).
+* 8th blink: Enable PWM output mode - each of the 8 PWM channels are on their own output pin (as original firmware).
+
+* 9th blink: Enable PPM output mode - the PPM stream is outputted on the channel-1 output.
+
+* 10th blink: Reset the receiver settings back to default (unbinded, no fail-safe, PWM output mode).
    
    
 N.B. The LED will continually flash once every second if the receiver has not been bound to an RC Tx.
