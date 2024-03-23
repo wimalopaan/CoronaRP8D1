@@ -33,8 +33,10 @@
 
 // #define USART_DEBUG // anble debug messages via UART (then ch7 and ch8 are not usable)
 #define MAX_FILTER_CHANNEL 4 // Channels above are not filtered
+// tbd
 #define SENDER_ID_CHANNEL 8 // Channel 9 sould contain sender ID (8-bit time multiplex (4 frames, each 2 bits)
 #define SBUS_OUT // sbus output on serial port
+#define SWITCH_CHANNELS // use ch4-8 as switching outputs for mutl-switch protocols
 
 #define low(word_reg)				((uint8_t)(word_reg))
 #define high(word_reg)				((uint8_t)(word_reg >> 8))
@@ -179,16 +181,6 @@ typedef struct
     bool     enable_sender_id;                          // enable sender identification (channel SENDER_ID_CHANNEL)
     uint8_t  sender_id;                                 // enable sender identification (channel SENDER_ID_CHANNEL)
 } T_EEPROM;
-
-// typedef struct
-// {
-// 	uint16_t marker;
-// 	uint16_t rf_channel;
-// 	uint8_t  flags;
-// 	uint8_t  pwm_channels;
-// 	uint16_t pwm[MAX_PWM_CHANNELS];
-// 	uint16_t crc;
-// } T_PACKET;
 
 #pragma pack()
 

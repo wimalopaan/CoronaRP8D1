@@ -27,8 +27,6 @@
 #include "main.h"
 #include "pins.h"
 
-// T_PACKET packet;
-
 uint8_t state;
 
 volatile bool scanning;
@@ -43,7 +41,6 @@ uint16_t prev_icr1;
 // values read from eeprom
 T_EEPROM ee;
 T_EEPROM eeprom EEMEM; // generates valid eeprom-offset address
-
 
 uint16_t pwm_in[MAX_PWM_CHANNELS];					// microseconds
 uint16_t prev_pwm_in[MAX_PWM_CHANNELS];				// microseconds
@@ -76,7 +73,6 @@ uint8_t uart_rx_buffer_rd;
 
 void stopUART(void);
 void startUART(void);
-
 void uartTxByteWait(uint8_t b);
 
 // ************************************
