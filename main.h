@@ -36,17 +36,10 @@
 #define SWITCH_CHANNELS_FROM 4 // use chx (x >= SWITCH_CHANNLES_FROM) as switching outputs for multi-switch protocols
 #define SWITCH_CHANNELS_DEFAULT false
 #define MULTI_SWITCHES 8 // number of switches decoded
+#define MULTI_SWITCH_CHANNEL 7 // incoming channel 8 use for multi-channel
 // tbd
 #define SENDER_ID_CHANNEL 8 // Channel 9 sould contain sender ID (8-bit time multiplex (4 frames, each 2 bits)
 #define SBUS_OUT // sbus output on serial port
-
-#define low(word_reg)				((uint8_t)(word_reg))
-#define high(word_reg)				((uint8_t)(word_reg >> 8))
-
-#define byte1(dword_reg)			((uint8_t)(dword_reg))
-#define byte2(dword_reg)			((uint8_t)(dword_reg >> 8))
-#define byte3(dword_reg)			((uint8_t)(dword_reg >> 16))
-#define byte4(dword_reg)			((uint8_t)(dword_reg >> 24))
 
 #define UART_BAUDRATE				19200
 //#define UART_BAUDRATE				38400
@@ -151,7 +144,6 @@ enum {
 //#define CH0_FREQ			36000000ul	// Hz
 //#define START_CHAN			     451	// NZ min chan
 //#define END_CHAN			     493	// NZ max chan
-
 
 #define PLL_REF_XTAL		11155000ul	// Hz
 #define PLL_REF_FREQ		    5000	// Hz

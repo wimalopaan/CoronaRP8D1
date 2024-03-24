@@ -66,7 +66,7 @@ uint8_t pwm_out_index;
 
 uint32_t rx_freq;									// Hz
 
-uint16_t counter1;
+uint16_t msCounter;
 
 uint8_t uart_rx_buffer[UART_RX_BUFFER_SIZE];
 uint8_t uart_rx_buffer_wr;
@@ -102,7 +102,7 @@ void setDefaultSettings(void) {
     ee.filter_high_channels = false;
 
     ee.switchChannels = SWITCH_CHANNELS_DEFAULT;
-    ee.multiSwitchChannel = 7; // channel 8
+    ee.multiSwitchChannel = MULTI_SWITCH_CHANNEL;
 
     ee.enable_sender_id = false;
     ee.sender_id = 0;
@@ -839,7 +839,7 @@ inline bool uartTxByteNoWait(uint8_t b)
 void processExec(void)
 {
     if (TIFR0 & (1 << TOV0))
-    {	// timer-0 overflowed: 1,024ms
+    {	// timer-0 overflowed: 32ms
         TIFR0 |= 1 << TOV0;	// reset flag
 
         if (last_ppm_frame_received_timer < 255)
@@ -856,7 +856,7 @@ void processExec(void)
             if (button_released_counter < 255) button_released_counter++;
         }
 
-        counter1++;
+        msCounter++;
     }
 
     if (scanning)
@@ -890,7 +890,7 @@ void processExec(void)
 
     if (ee.pwm_channels < MIN_PWM_CHANNELS)
     {											// we are not bound to an RC Tx .. continuously flash the LED
-        if ((counter1 & 0x001f) < 16)
+        if ((msCounter & 0x001f) < 16)
             LED_PORT &= ~(1 << LED_BIT);		// led OFF
         else
             LED_PORT |= 1 << LED_BIT;			// led ON
@@ -905,7 +905,7 @@ void processExec(void)
 
     if (failsafe_mode || pwm_in_frames < 2)
     {											// we are not receiving a valid signal
-        if ((counter1 & 0x003f) < 2)
+        if ((msCounter & 0x003f) < 2)
             LED_PORT |= 1 << LED_BIT;			// led ON ... blink the led breifly
         else
             LED_PORT &= ~(1 << LED_BIT);		// led OFF
@@ -1065,7 +1065,7 @@ bool processState(void)
         if (button_pressed_counter >= 32 * 2)		// button been pressed for 2 seconds?
         {											// yes
             state++;
-            counter1 = 0;
+            msCounter = 0;
             LED_PORT &= ~(1 << LED_BIT);			// led OFF
         }
         return true;
@@ -1081,7 +1081,7 @@ bool processState(void)
             }
             else
             {										// button is still pressed
-                if (!(counter1 & 2))				// flash the LED until they release the button
+                if (!(msCounter & 2))				// flash the LED until they release the button
                     LED_PORT |= 1 << LED_BIT;		// led ON
                 else
                     LED_PORT &= ~(1 << LED_BIT);	// led OFF
@@ -1089,16 +1089,16 @@ bool processState(void)
             return true;
         }
         state++;									// next config option
-        counter1 = 0;
+        msCounter = 0;
         LED_PORT |= 1 << LED_BIT;					// led ON
         return true;
     }
 
     // config option state
 
-    if (counter1 < 6)								// wait until the LED has been on for a while
+    if (msCounter < 6)								// wait until the LED has been on for a while
     {
-        if (counter1 < 2)
+        if (msCounter < 2)
             button_pressed_counter = 0;
         return true;
     }
@@ -1107,10 +1107,10 @@ bool processState(void)
 
     if (button_pressed_counter < 3)					// button pressed?
     {												// not yet
-        if (counter1 >= 48)							// 1.5 second time-out waiting for button press
+        if (msCounter >= 48)							// 1.5 second time-out waiting for button press
         {
             state++;								// next config option
-            counter1 = 0;
+            msCounter = 0;
             if (state >= state_last)
                 return false;						// back to normal mode
             LED_PORT |= 1 << LED_BIT;				// led ON
@@ -1317,7 +1317,7 @@ int main(void)
 
     failsafe_mode = true;
 
-    counter1 = 0;
+    msCounter = 0;
 
     scanning = false;
 
@@ -1376,7 +1376,7 @@ int main(void)
         setPLLChannel(ee.rf_channel);
 
         state = state_normal;
-        counter1 = 0;
+        msCounter = 0;
 
         while (true)
         {
