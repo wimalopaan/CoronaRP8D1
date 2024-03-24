@@ -177,7 +177,7 @@ N.B. The LED will continually flash once every second if the receiver has not be
 |27	|PC4	|PLL CLK signal output
 |28	|PC5	|Not connected
 |29	|PC6	|Channel 9 PPM output
-|30	|PD0	|Channel 8 PPM outputm Usart0-Rx
+|30	|PD0	|Channel 8 PPM output, Usart0-Rx
 |31	|PD1	|Channel 7 PPM output, Usart0-TX, SBus (uninverted)
 |32	|PD2	|Not connected
 |===
