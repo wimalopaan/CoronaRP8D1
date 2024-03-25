@@ -74,14 +74,14 @@ uint8_t uart_rx_buffer_rd;
 
 // ************************************
 
-void stopUART(void);
-void startUART(void);
-void uartTxByteWait(uint8_t b);
+static inline void stopUART(void);
+static inline void startUART(void);
+static inline void uartTxByteWait(uint8_t b);
 
 // ************************************
 // revert all settings back to defaults
 
-void setDefaultSettings(void) {
+static inline void setDefaultSettings(void) {
 #ifdef USART_DEBUG
     uartTxByteWait(0x01);
 #endif
@@ -117,7 +117,7 @@ void setDefaultSettings(void) {
 // ************************************
 // set all the PWM channel outputs LOW
 
-void allOutputsLow(void) {
+static inline void allOutputsLow(void) {
     CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT);		// pin LOW
     CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT);		// pin LOW
     CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT);		// pin LOW
@@ -133,7 +133,7 @@ void allOutputsLow(void) {
 // ************************************
 // copy the fail-safe pwm values to the outputs and enable sail-safe mode
 
-void useFailSafeValues(void) {
+static inline void useFailSafeValues(void) {
     uint8_t sreg = SREG;
     cli();
     for (int i = 0; i < MAX_PWM_CHANNELS; i++) {
@@ -148,7 +148,7 @@ void useFailSafeValues(void) {
 // ************************************
 // feed the doggy
 
-bool feedWatchdog(void) {
+static inline bool feedWatchdog(void) {
     if (WDTCSR & (1 << WDIE))
         return false;					// watchdog hasn't yet timed out
 
@@ -167,6 +167,31 @@ bool feedWatchdog(void) {
 //
 // This should be the ONLY interrupt in the whole system - this is to ensure
 // nothing else upsets the output of PPM/PWM waveforms (timing is critical).
+
+static inline void setOutput(const uint8_t chan) {
+    switch (chan) {
+    case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
+    case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
+    case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
+    case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
+    case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
+    case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
+    case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
+    case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
+    }
+}
+static inline void resetOutput(const uint8_t chan) {
+    switch (chan) {
+    case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
+    case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
+    case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
+    case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
+    case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
+    case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
+    case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
+    case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
+    }
+}
 
 ISR(TIMER1_COMPA_vect) {
     if (
@@ -223,41 +248,14 @@ ISR(TIMER1_COMPA_vect) {
                 if (ee.switchChannels && (chan >= SWITCH_CHANNELS_FROM)) {
                     const uint8_t sw = switchValues[chan - SWITCH_CHANNELS_FROM];
                     if (sw == 2) {
-                        switch (chan) {
-                        case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
-                        case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
-                        case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
-                        case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
-                        case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
-                        case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
-                        case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
-                        case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
-                        }
+                        setOutput(chan);
                     }
                     else {
-                        switch (chan) {
-                        case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
-                        case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
-                        case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
-                        case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
-                        case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
-                        case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
-                        case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
-                        case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
-                        }
+                        resetOutput(chan);
                     }
                 }
                 else {
-                    switch (chan) {
-                    case 0: CHAN_1_OUT_PORT |= 1 << CHAN_1_OUT_BIT; break;	// pin HIGH
-                    case 1: CHAN_2_OUT_PORT |= 1 << CHAN_2_OUT_BIT; break;	// pin HIGH
-                    case 2: CHAN_3_OUT_PORT |= 1 << CHAN_3_OUT_BIT; break;	// pin HIGH
-                    case 3: CHAN_4_OUT_PORT |= 1 << CHAN_4_OUT_BIT; break;	// pin HIGH
-                    case 4: CHAN_5_OUT_PORT |= 1 << CHAN_5_OUT_BIT; break;	// pin HIGH
-                    case 5: CHAN_6_OUT_PORT |= 1 << CHAN_6_OUT_BIT; break;	// pin HIGH
-                    case 6: CHAN_7_OUT_PORT |= 1 << CHAN_7_OUT_BIT; break;	// pin HIGH
-                    case 7: CHAN_8_OUT_PORT |= 1 << CHAN_8_OUT_BIT; break;	// pin HIGH
-                    }
+                    setOutput(chan);
                 }
                 uint16_t pulse_width = pwm_out[chan];
                 if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
@@ -271,16 +269,7 @@ ISR(TIMER1_COMPA_vect) {
 
                 }
                 else {
-                    switch (chan) {
-                    case 0: CHAN_1_OUT_PORT &= ~(1 << CHAN_1_OUT_BIT); break;	// pin LOW
-                    case 1: CHAN_2_OUT_PORT &= ~(1 << CHAN_2_OUT_BIT); break;	// pin LOW
-                    case 2: CHAN_3_OUT_PORT &= ~(1 << CHAN_3_OUT_BIT); break;	// pin LOW
-                    case 3: CHAN_4_OUT_PORT &= ~(1 << CHAN_4_OUT_BIT); break;	// pin LOW
-                    case 4: CHAN_5_OUT_PORT &= ~(1 << CHAN_5_OUT_BIT); break;	// pin LOW
-                    case 5: CHAN_6_OUT_PORT &= ~(1 << CHAN_6_OUT_BIT); break;	// pin LOW
-                    case 6: CHAN_7_OUT_PORT &= ~(1 << CHAN_7_OUT_BIT); break;	// pin LOW
-                    case 7: CHAN_8_OUT_PORT &= ~(1 << CHAN_8_OUT_BIT); break;	// pin LOW
-                    }
+                    resetOutput(chan);
                 }
                 uint16_t pulse_width = pwm_out[chan];
                 if (pulse_width < MIN_PWM_WIDTH) pulse_width = MIN_PWM_WIDTH;
@@ -347,14 +336,14 @@ ISR(TIMER1_COMPA_vect) {
 // ************************************
 
 ISR(USART0_RX_vect){
-    register uint8_t stat = UCSR0A;						// get status
-    register uint8_t data = UDR0;						// get received byte
+    const uint8_t stat = UCSR0A;						// get status
+    const uint8_t data = UDR0;						// get received byte
 
     if (stat & (1 << FE0)) return;						// frame error (faulty stop bit)
     if (stat & (1 << DOR0)) return;						// data overrun (failed to read the previous data byte before the current one came in)
     if (stat & (1 << UPE0)) return;						// parity error
 
-    register uint8_t i = uart_rx_buffer_wr;				// fetch the index
+    uint8_t i = uart_rx_buffer_wr;				// fetch the index
     uart_rx_buffer[i] = data;							// save rx'ed byte
     if (++i >= (uint8_t)sizeof(uart_rx_buffer)) i = 0;	// update the index
     uart_rx_buffer_wr = i;								// save the new index
@@ -366,7 +355,7 @@ ISR(USART0_RX_vect){
 // Do this in the exec (rather than interrupt) so as not to interfere with the PPM/PWM waveform output generation.
 // Just make sure you call this as often and quickly as possible.
 
-void processInputCaptureScanning(int16_t microsecs) {
+static inline void processInputCaptureScanning(int16_t microsecs) {
     // the received PPM stream is expected to be clean (very strong signal) .. so don't bother with any kind of noise reduction/detection
 
     if (microsecs > MAX_PWM_WIDTH || pwm_in_index < 0) {	// SYNC pulse, or waiting for a SYNC pulse
@@ -413,7 +402,7 @@ void processInputCaptureScanning(int16_t microsecs) {
     }
 }
 
-bool processInputCaptureNormal(int16_t microsecs) {
+static inline bool processInputCaptureNormal(int16_t microsecs) {
     if (ee.pwm_channels < MIN_PWM_CHANNELS)
         return false;			// we have not yet been bound to an RC Tx .. ignore the input PPM stream
 
@@ -549,7 +538,7 @@ bool processInputCaptureNormal(int16_t microsecs) {
     return true;
 }
 
-void processInputCapture(void) {
+static inline void processInputCapture(void) {
     const uint8_t flags = TIFR1 & ((1 << TOV1) | (1 << ICF1));
     if (!flags)
         return;										// nothing to process
@@ -585,7 +574,7 @@ void processInputCapture(void) {
 
 // ************************************
 
-void setPLL(uint32_t data) {
+static inline void setPLL(uint32_t data) {
     PLL_CLK_OUT_PORT &= ~(1 << PLL_CLK_OUT_BIT);			// pin LOW
     PLL_CE_OUT_PORT &= ~(1 << PLL_CE_OUT_BIT);				// pin LOW
     _delay_us(16);
@@ -609,7 +598,7 @@ void setPLL(uint32_t data) {
     PLL_CE_OUT_PORT &= ~(1 << PLL_CE_OUT_BIT);				// pin LOW
 }
 
-void setPLLChannel(uint16_t channel) {
+static inline void setPLLChannel(uint16_t channel) {
     if (channel < START_CHAN) channel = START_CHAN;
     else
         if (channel > END_CHAN) channel = END_CHAN;
@@ -638,7 +627,7 @@ void setPLLChannel(uint16_t channel) {
 
 // ************************************
 
-void enableAnaComp(void) {
+static inline void enableAnaComp(void) {
     // this uses the AIN0 and ADC1 inputs - so we can't use the normal ADC while we are using the AC
 
     PRR0 &= ~(1 << PRADC);			// power up the adc
@@ -690,7 +679,7 @@ void enableADC(void) {
     ADCSRA |= (1<<ADSC) | (1<<ADIF);
 }
 
-int16_t readADC(void) {
+static inline int16_t readADC(void) {
     if (!(ADCSRA & (1 << ADIF)))
         return -1;						// ADC is still sampling
     uint16_t adc = ADC;					// read the ADC register
@@ -700,7 +689,7 @@ int16_t readADC(void) {
 
 // ************************************
 
-void startTimer0(void) {
+static inline void startTimer0(void) {
     uint8_t sreg = SREG;
     cli();
 
@@ -727,7 +716,7 @@ void startTimer0(void) {
 
 // ************************************
 
-void startTimer1(void) {
+static inline void startTimer1(void) {
     uint8_t sreg = SREG;
     cli();
 
@@ -764,7 +753,7 @@ void startTimer1(void) {
 
 // ************************************
 
-void stopUART(void)
+static inline void stopUART(void)
 {
     uint8_t sreg = SREG;
     cli();
@@ -787,7 +776,7 @@ void stopUART(void)
     SREG = sreg;
 }
 
-void startUART(void)
+static inline void startUART(void)
 {
 
     uint8_t sreg = SREG;
@@ -819,14 +808,14 @@ void startUART(void)
     SREG = sreg;
 }
 
-inline void uartTxByteWait(uint8_t b)
+static inline void uartTxByteWait(uint8_t b)
 {
     if (PRR0 & (1 << PRUSART0)) return;				// the UART is not enabled
     while (!(UCSR0A & (1 << UDRE0)));				// wait until previous byte sent
     UDR0 = b;										// send byte
 }
 
-inline bool uartTxByteNoWait(uint8_t b)
+static inline bool uartTxByteNoWait(uint8_t b)
 {
     if (PRR0 & (1 << PRUSART0)) return false;		// the UART is not enabled
     if (!(UCSR0A & (1 << UDRE0))) return false;		// previous byte has not yet been sent
@@ -836,7 +825,7 @@ inline bool uartTxByteNoWait(uint8_t b)
 
 // ************************************
 
-void processExec(void)
+static inline void processExec(void)
 {
     if (TIFR0 & (1 << TOV0))
     {	// timer-0 overflowed: 32ms
@@ -921,7 +910,7 @@ void processExec(void)
 // scan the band for the strongest valid RC TX
 // if we find one then bind to it
 
-void scan(void)
+static inline void scan(void)
 {
     scanning = true;
 
@@ -1058,7 +1047,7 @@ void scan(void)
 
 // ************************************
 
-bool processState(void)
+static inline bool processState(void)
 {
     if (state == state_normal)
     {	// normal

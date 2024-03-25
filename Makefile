@@ -9,7 +9,7 @@ F_OSC = 8000000
 
 MCUFLAGS = -mmcu=$(MCU)
 CXXFLAGS += $(MCUFLAGS)
-CFLAGS += $(MCUFLAGS) -DF_CPU=$(F_OSC) -Os
+CFLAGS += $(MCUFLAGS) -DF_CPU=$(F_OSC) -O3
 
 CC = /usr/bin/avr-gcc
 CXX = /usr/bin/avr-g++
