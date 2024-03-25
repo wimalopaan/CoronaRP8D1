@@ -871,14 +871,12 @@ static inline void processExec(void)
     if (state != state_normal)
         return;									// we are not in Normal mode
 
-    if (button_pressed_counter >= 3)
-    {											// the button is pressed
+    if (button_pressed_counter >= 3){											// the button is pressed
         LED_PORT &= ~(1 << LED_BIT);			// led OFF
         return;
     }
 
-    if (ee.pwm_channels < MIN_PWM_CHANNELS)
-    {											// we are not bound to an RC Tx .. continuously flash the LED
+    if (ee.pwm_channels < MIN_PWM_CHANNELS) {											// we are not bound to an RC Tx .. continuously flash the LED
         if ((msCounter & 0x001f) < 16)
             LED_PORT &= ~(1 << LED_BIT);		// led OFF
         else
@@ -892,8 +890,7 @@ static inline void processExec(void)
 
     // we are bound to an RC Tx
 
-    if (failsafe_mode || pwm_in_frames < 2)
-    {											// we are not receiving a valid signal
+    if (failsafe_mode || pwm_in_frames < 2) {											// we are not receiving a valid signal
         if ((msCounter & 0x003f) < 2)
             LED_PORT |= 1 << LED_BIT;			// led ON ... blink the led breifly
         else
@@ -910,8 +907,7 @@ static inline void processExec(void)
 // scan the band for the strongest valid RC TX
 // if we find one then bind to it
 
-static inline void scan(void)
-{
+static inline void scan(void) {
     scanning = true;
 
     // useFailSafeValues();								// use the fail-safe values while scanning for a transmitter
@@ -927,8 +923,7 @@ static inline void scan(void)
 
     uint16_t chan = START_CHAN;
 
-    while (chan <= END_CHAN)
-    {
+    while (chan <= END_CHAN) {
         LED_PIN |= 1 << LED_BIT;						// led TOGGLE
 
         enableADC();									// we want to monitor the RSSI level
@@ -993,8 +988,7 @@ static inline void scan(void)
 
     LED_PORT &= ~(1 << LED_BIT);							// led OFF
 
-    if (rf_chan > 0 && pwm_chans >= MIN_PWM_CHANNELS)
-    {	// we found an RC Tx to bind with, so lets do it!
+    if (rf_chan > 0 && pwm_chans >= MIN_PWM_CHANNELS) {	// we found an RC Tx to bind with, so lets do it!
 
         ee.rf_channel = rf_chan;							// the RF channel the TX is on
 
@@ -1047,11 +1041,9 @@ static inline void scan(void)
 
 // ************************************
 
-static inline bool processState(void)
-{
-    if (state == state_normal)
-    {	// normal
-        if (button_pressed_counter >= 32 * 2)		// button been pressed for 2 seconds?
+static inline bool processState(void) {
+    if (state == state_normal) {	// normal
+        if (button_pressed_counter >= (32 * 2))		// button been pressed for 2 seconds?
         {											// yes
             state++;
             msCounter = 0;
@@ -1060,8 +1052,7 @@ static inline bool processState(void)
         return true;
     }
 
-    if (state == state_but_release)
-    {	// wait for button release
+    if (state == state_but_release) {	// wait for button release
         if (button_released_counter < 48)			// button been released for 1.5 second ?
         {											// not yet
             if (button_pressed_counter <= 0)		// button still pressed ?
@@ -1188,8 +1179,7 @@ static inline bool processState(void)
 
 // ************************************
 
-int main(void)
-{
+int main(void) {
     cli();
 
     CLKPR = 1 << CLKPCE;					// Enable main clock prescaler change
@@ -1349,13 +1339,11 @@ int main(void)
     // failsafe_mode = false;
     sei();
 
-    while (true)
-    {
+    while (true) {
         wdt_reset();
 
         // flash the led 2 times
-        for (int i = 2; i > 0; i--)
-        {
+        for (int i = 2; i > 0; i--) {
             LED_PORT |= 1 << LED_BIT;						// led ON
             _delay_ms(70);
             LED_PORT &= ~(1 << LED_BIT);					// led OFF
