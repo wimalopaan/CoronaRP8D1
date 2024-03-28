@@ -49,12 +49,13 @@ This replacement firmware has the following features:
 
 * the filtering of the channels 5-8 can be disabled/enabled as a config option
 * combined-ppm stream can be outputted on channel-1 of the receiver instead of individual pwm-signals
-* Mutli-Switch decoder in the receiver itself (use some of the channel-outputs as switch outputs)
+* Multi-Switch decoder in the receiver itself (use some of the channel-outputs as switch outputs)
 
-Not fully implemented yet:
+Not (fully) implemented yet:
 
 * `SBus`/`IBus`/`SumDV3` output
-* transmitter-identification (requires a transmitter modification)
+* transmitter-identification (requires a transmitter modification) (sometimes called model-match)
+* PCM1024 decoder
 
 == Modifications
 
