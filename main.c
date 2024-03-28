@@ -27,19 +27,19 @@
 #include "main.h"
 #include "pins.h"
 
-uint8_t state;
+static uint8_t state;
 
 volatile bool scanning;
 
-uint8_t button_pressed_counter;
-uint8_t button_released_counter;
+static uint8_t button_pressed_counter;
+static uint8_t button_released_counter;
 
-uint8_t last_ppm_frame_received_timer;
+static uint8_t last_ppm_frame_received_timer;
 
-uint16_t prev_icr1;
+static uint16_t prev_icr1;
 
 // values read from eeprom
-volatile T_EEPROM ee;
+static volatile T_EEPROM ee;
 T_EEPROM eeprom EEMEM; // generates valid eeprom-offset address
 
 uint16_t pwm_in[MAX_PWM_CHANNELS];					// microseconds
@@ -825,8 +825,7 @@ static inline bool uartTxByteNoWait(uint8_t b)
 
 // ************************************
 
-static inline void processExec(void)
-{
+static inline void processExec(void) {
     if (TIFR0 & (1 << TOV0))
     {	// timer-0 overflowed: 32ms
         TIFR0 |= 1 << TOV0;	// reset flag

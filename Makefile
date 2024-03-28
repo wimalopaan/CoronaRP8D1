@@ -34,3 +34,8 @@ main.elf: main.c
 
 %.hex: %.elf
 	$(OBJCOPY) -O ihex -R .eeprom $(shell pwd)/$< $@
+
+clean:
+	$(RM) *.elf
+	$(RM) *.hex
+
