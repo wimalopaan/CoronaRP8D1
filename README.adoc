@@ -198,3 +198,5 @@ N.B. The LED will continually flash once every second if the receiver has not be
 
 == Images
 
+.Fresh new box
+image::images/box.jpg[width=50%]
