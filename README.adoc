@@ -200,3 +200,30 @@ N.B. The LED will continually flash once every second if the receiver has not be
 
 .Fresh new box
 image::images/box.jpg[width=50%]
+
+.A virgin receiver
+image::images/virgin.jpg[width=50%]
+
+.PCB view
+image::images/mictronics01.jpg[width=50%]
+
+.PCB view
+image::images/mictronics02.jpg[width=50%]
+
+.PCB view
+image::images/mictronics03.jpg[width=50%]
+
+.PCB view
+image::images/mictronics04.jpg[width=50%]
+
+.PCB view
+image::images/mictronics05.jpg[width=50%]
+
+.Removed µC
+image::images/removedmc.jpg[width=50%]
+
+.New µC
+image::images/newmc.jpg[width=50%]
+
+.Works together with old analog switch module
+image::images/gr.jpg[width=50%]
